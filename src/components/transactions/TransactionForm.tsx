@@ -1,13 +1,13 @@
 // src/components/transactions/TransactionForm.tsx
-import React, { useRef, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, Platform, ScrollView, KeyboardAvoidingView, findNodeHandle } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, Pressable, Platform } from 'react-native';
 import ScreenContainer from '../common/ScreenContainer';
 import theme from '../../theme';
 import { MAIN_CATEGORIES, PAYMENT_METHODS, MainCategory, PaymentMethod } from '../../types/transaction';
 import { Transaction, insertTransaction, updateTransaction } from '../../db/database';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { useHeaderHeight } from '@react-navigation/elements';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 type TransactionFormMode = 'create' | 'edit';
 
@@ -19,9 +19,6 @@ type Props = {
 };
 export default function TransactionForm({ mode, initialTransaction, onSaved, onCancel }: Props) {
     const isEdit = mode === 'edit';
-    const scrollViewRef = useRef<ScrollView>(null);
-    const memoInputRef = useRef<TextInput>(null);
-    const headerHeight = useHeaderHeight();
 
     const [date, setDate] = useState<Date>(() => {
         if (initialTransaction) {
@@ -169,17 +166,13 @@ export default function TransactionForm({ mode, initialTransaction, onSaved, onC
 
     return (
         <ScreenContainer style={styles.container}>
-            <KeyboardAvoidingView
-                style={styles.keyboardAvoidingView}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+            <KeyboardAwareScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                enableOnAndroid
+                extraScrollHeight={Platform.OS === 'ios' ? theme.spacing.lg : theme.spacing.md}
             >
-                <ScrollView
-                    ref={scrollViewRef}
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
-                    keyboardShouldPersistTaps="handled"
-                >
                     <Text style={styles.title}>
                         {isEdit ? '지출 수정' : '지출 추가'}
                     </Text>
@@ -355,28 +348,11 @@ export default function TransactionForm({ mode, initialTransaction, onSaved, onC
                     <Text style={styles.label}>메모</Text>
                     <View style={styles.inputWrapper}>
                         <TextInput
-                            ref={memoInputRef}
                             style={[styles.input, styles.inputWithClear, styles.memoInput]}
                             value={memo}
                             onChangeText={setMemo}
                             placeholder="내용을 입력하세요"
                             multiline
-                            onFocus={() => {
-                                setTimeout(() => {
-                                    const scrollNode = findNodeHandle(scrollViewRef.current);
-                                    if (!scrollNode || !memoInputRef.current) return;
-                                    memoInputRef?.current?.measureLayout(
-                                        scrollNode,
-                                        (_x, y) => {
-                                            scrollViewRef.current?.scrollTo({
-                                                y: Math.max(0, y - theme.spacing.lg),
-                                                animated: true,
-                                            });
-                                        },
-                                        () => { }
-                                    );
-                                }, 150);
-                            }}
                         />
                         {memo.length > 0 && (
                             <Pressable
@@ -397,8 +373,7 @@ export default function TransactionForm({ mode, initialTransaction, onSaved, onC
                             <Text style={styles.saveButtonText}>{saving ? '저장 중...' : '저장'}</Text>
                         </Pressable>
                     </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
+            </KeyboardAwareScrollView>
         </ScreenContainer>
     );
 }
@@ -413,9 +388,6 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingBottom: theme.spacing.xl,
-    },
-    keyboardAvoidingView: {
-        flex: 1,
     },
     title: {
         fontSize: theme.typography.title.fontSize,
