@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "family-budget-app",
-    "slug": "family-budget-app",
+    "name": "BudgetBook",
+    "slug": "BudgetBook",
     "version": "1.0.0",
+    "description": "A mobile app for managing your family's budget",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -25,6 +26,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-sqlite"
+    ]
   }
 }
