@@ -23,6 +23,22 @@ npm install
 npm run start
 ```
 
+## iOS에서 실행하기 (Expo Go)
+이 프로젝트는 현재 **웹 실행이 불가**하므로 iOS 디바이스에서 확인해야 합니다.
+
+### 준비물
+- iPhone에 **Expo Go** 설치 (App Store)
+- 개발 PC와 iPhone이 **같은 Wi‑Fi**에 연결
+
+### 실행 순서
+1. 터미널에서 `npm run start`
+2. 터미널에 뜨는 QR 코드를 iPhone 카메라로 스캔
+3. Expo Go가 열리면서 앱이 실행됨
+
+문제가 생기면:
+- iPhone과 PC가 같은 네트워크인지 확인
+- QR 대신 터미널의 `c`(clear) 후 다시 스캔
+
 ### 실행 옵션
 ```bash
 npm run android
