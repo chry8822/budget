@@ -8,6 +8,7 @@ import { addCategory, deleteCategory, Category, Transaction, getCategories, inse
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useTransactionChange } from '../common/TransactionChangeContext';
 
 type TransactionFormMode = 'create' | 'edit';
 
@@ -19,6 +20,7 @@ type Props = {
 };
 export default function TransactionForm({ mode, initialTransaction, onSaved, onCancel }: Props) {
     const isEdit = mode === 'edit';
+    const { notifyChanged } = useTransactionChange();
 
     const scaleAnim = useRef(new Animated.Value(0.5)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -196,6 +198,8 @@ export default function TransactionForm({ mode, initialTransaction, onSaved, onC
             console.error(e);
             setSaving(false);
             alert('저장 중 오류가 발생했습니다.');
+        } finally {
+            notifyChanged();
         }
     };
 

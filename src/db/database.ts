@@ -15,6 +15,7 @@ export type Transaction = {
   createdAt: string;     // new Date().toISOString()
 };
 
+
 // 새 버전: 동기 방식으로 DB 핸들 얻기
 const db = SQLite.openDatabaseSync(DB_NAME); // SQLiteDatabase 타입[web:130][web:170]
 
@@ -266,3 +267,40 @@ export async function addCategory(name: string): Promise<void> {
 export async function deleteCategory(id: number): Promise<void> {
   await db.runAsync(`DELETE FROM categories WHERE id = ?;`, [id]);
 }
+
+export async function getRecentTransactionsOfMonth(
+  year: number,
+  month: number,
+  limit: number
+): Promise<Transaction[]> {
+  const monthStr = month.toString().padStart(2, '0');
+  const prefix = `${year}-${monthStr}`; // 예: 2026-02
+
+  try {
+    const rows = await db.getAllAsync<Transaction>(
+      `
+      SELECT
+        id,
+        date,
+        amount,
+        type,
+        mainCategory,
+        subCategory,
+        paymentMethod,
+        memo,
+        createdAt
+      FROM transactions
+      WHERE type = 'expense'
+        AND date LIKE ?
+      ORDER BY date DESC, createdAt DESC
+      LIMIT ?;
+      `,
+      [`${prefix}%`, limit]
+    );
+    return rows;
+  } catch (error) {
+    console.error('getRecentTransactionsOfMonth 에러', error);
+    throw error;
+  }
+}
+

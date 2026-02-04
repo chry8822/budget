@@ -2,7 +2,12 @@ import { View, Text, StyleSheet, ScrollView, RefreshControl, Animated } from 're
 import React, { useEffect, useRef, useState } from 'react';
 import ScreenContainer from '../components/common/ScreenContainer';
 import theme from '../theme';
-import { getMonthlySummary, MonthlySummary } from '../db/database';
+import {
+    getMonthlySummary,
+    MonthlySummary,
+    getRecentTransactionsOfMonth,
+    Transaction,
+} from '../db/database';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 
@@ -26,6 +31,7 @@ export default function HomeScreen() {
     const [summary, setSummary] = useState<MonthlySummary | null>(null);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [recentRows, setRecentRows] = useState<Transaction[]>([]);
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
     const startBreathingAnimation = () => {
@@ -45,11 +51,13 @@ export default function HomeScreen() {
         ).start();
     };
 
-
     const loadSummary = async () => {
         setLoading(true);
         try {
             const data = await getMonthlySummary(year, month);
+            const recents = await getRecentTransactionsOfMonth(year, month, 5);
+
+            setRecentRows(recents);
             setSummary(data);
         } catch (e) {
             console.error(e);
@@ -112,10 +120,37 @@ export default function HomeScreen() {
                             {totalExpense.toLocaleString()}원
                         </Text>
                     )}
-                    <Text style={styles.cardHint}>
-                        (수입/저축은 나중에 확장할 수 있어. 지금은 지출 중심으로 볼게.)
-                    </Text>
                 </View>
+
+                <View style={styles.card}>
+                    <Text style={styles.cardTitle}>최근 지출</Text>
+
+                    {loading ? (
+                        <Text style={styles.bodyText}>불러오는 중...</Text>
+                    ) : recentRows.length === 0 ? (
+                        <Text style={styles.bodyText}>아직 등록된 지출이 없습니다.</Text>
+                    ) : (
+                        recentRows.map(row => (
+                            <View key={row.id} style={styles.recentRow}>
+                                <View style={styles.recentLeft}>
+                                    <Text style={styles.recentCategory}>{row.mainCategory}</Text>
+                                    {row.memo ? (
+                                        <Text style={styles.recentMemo} numberOfLines={1}>
+                                            {row.memo}
+                                        </Text>
+                                    ) : null}
+                                </View>
+                                <View style={styles.recentRight}>
+                                    <Text style={styles.recentAmount}>
+                                        {row.amount.toLocaleString()}원
+                                    </Text>
+                                    <Text style={styles.recentDate}>{row.date}</Text>
+                                </View>
+                            </View>
+                        ))
+                    )}
+                </View>
+
 
                 {/* 카테고리 Top 3 */}
                 <View style={styles.card}>
@@ -197,4 +232,40 @@ const styles = StyleSheet.create({
         ...theme.typography.body,
         fontWeight: 'bold',
     },
+
+    recentRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: theme.spacing.xs,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: theme.colors.border,
+    },
+    recentLeft: {
+        flex: 1,
+        paddingRight: theme.spacing.sm,
+    },
+    recentRight: {
+        alignItems: 'flex-end',
+    },
+    recentCategory: {
+        ...theme.typography.body,
+        fontWeight: 'bold',
+    },
+    recentMemo: {
+        ...theme.typography.body,
+        fontSize: theme.typography.sizes.xs,
+        color: theme.colors.textMuted,
+        marginTop: 2,
+    },
+    recentAmount: {
+        ...theme.typography.body,
+        fontWeight: 'bold',
+    },
+    recentDate: {
+        fontSize: theme.typography.sizes.xs,
+        color: theme.colors.textMuted,
+        marginTop: 2,
+    },
+
 });

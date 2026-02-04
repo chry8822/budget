@@ -16,13 +16,15 @@ import { Ionicons } from '@expo/vector-icons';
 import theme from '../theme';
 import { Alert } from 'react-native';
 import MonthYearPicker from '../components/common/MonthYearPicker';
+import { useTransactionChange } from '../components/common/TransactionChangeContext';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type SummaryRange = 'thisMonth' | 'lastMonth' | 'all' | 'custom';
 
 export default function TransactionsScreen() {
+    const { notifyChanged } = useTransactionChange();
+
     const now = new Date();
-    const tabBarHeight = useBottomTabBarHeight();
     const [summaryRange, setSummaryRange] = useState<SummaryRange>('thisMonth');
 
     // 커스텀 선택용 연/월
@@ -43,6 +45,8 @@ export default function TransactionsScreen() {
         try {
             const data = await getAllTransactions();
             setTransactions(data);
+            notifyChanged();
+
         } catch (e) {
             console.error(e);
             alert('내역을 불러오는 중 오류가 발생했습니다.');

@@ -21,6 +21,7 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: colors.background,
+        paddingTop: spacing.md,
     },
     inner: {
         flex: 1,

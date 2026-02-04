@@ -1,7 +1,7 @@
 // src/theme/colors.ts
 const colors = {
     background: '#FFFFFF',
-    surface: '#FAFAFA',
+    surface: '#F2F2F2',
 
     primary: '#FF6B6B',     // 지출 관련 포인트 컬러
     primarySoft: '#FFE5E5',

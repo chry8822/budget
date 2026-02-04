@@ -15,6 +15,7 @@ import { initDatabase } from './src/db/database';
 import theme from './src/theme';
 import EditTransactionScreen from './src/screens/EditTransactionScreen';
 import SummaryScreen from './src/screens/SummaryScreen';
+import { TransactionChangeProvider } from './src/components/common/TransactionChangeContext';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -83,35 +84,38 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator>
-        {/* 하단 탭 3개가 들어있는 메인 화면 */}
-        <Stack.Screen
-          name="MainTabs"
-          component={MainTabs}
-          options={{ headerShown: false }}
-        />
+    <TransactionChangeProvider>
+      <NavigationContainer>
+        <Stack.Navigator>
+          {/* 하단 탭 3개가 들어있는 메인 화면 */}
+          <Stack.Screen
+            name="MainTabs"
+            component={MainTabs}
+            options={{ headerShown: false }}
+          />
 
-        {/* 지출 추가 화면 (상단 헤더 + 뒤로가기 버튼 자동 생성) */}
-        <Stack.Screen
-          name="AddTransaction"
-          component={AddTransactionScreen}
-          options={{
-            title: '지출 추가',
-            headerBackTitle: '뒤로',
-            headerShown: false
-          }}
-        />
-        <Stack.Screen
-          name="EditTransaction"
-          component={EditTransactionScreen}
-          options={{
-            title: '지출 수정',
-            headerBackTitle: '뒤로',
-            headerShown: false
-          }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+          {/* 지출 추가 화면 (상단 헤더 + 뒤로가기 버튼 자동 생성) */}
+          <Stack.Screen
+            name="AddTransaction"
+            component={AddTransactionScreen}
+            options={{
+              title: '지출 추가',
+              headerBackTitle: '뒤로',
+              headerShown: false
+            }}
+          />
+          <Stack.Screen
+            name="EditTransaction"
+            component={EditTransactionScreen}
+            options={{
+              title: '지출 수정',
+              headerBackTitle: '뒤로',
+              headerShown: false
+            }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </TransactionChangeProvider>
+
   );
 }
