@@ -14,3 +14,13 @@ export const CREATE_TRANSACTIONS_TABLE = `
     createdAt TEXT NOT NULL         -- 생성 시각 (ISO 문자열)
   );
 `;
+
+
+export const CREATE_CATEGORIES_TABLE = `
+  CREATE TABLE IF NOT EXISTS categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    isDefault INTEGER NOT NULL DEFAULT 0,
+    createdAt TEXT NOT NULL
+  );
+`;

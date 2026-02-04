@@ -1,40 +1,38 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     View,
     Text,
     StyleSheet,
     FlatList,
-    Modal,
     Pressable,
-    ScrollView,
 } from 'react-native';
 import ScreenContainer from '../components/common/ScreenContainer';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { getAllTransactions, Transaction, deleteTransactionById } from '../db/database';
 import { Ionicons } from '@expo/vector-icons';
 import theme from '../theme';
 import { Alert } from 'react-native';
-
+import MonthYearPicker from '../components/common/MonthYearPicker';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type SummaryRange = 'thisMonth' | 'lastMonth' | 'all' | 'custom';
 
-const now = new Date();
-const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 3 + i);
-const months = Array.from({ length: 12 }, (_, i) => i + 1);
-
 export default function TransactionsScreen() {
     const now = new Date();
+    const tabBarHeight = useBottomTabBarHeight();
     const [summaryRange, setSummaryRange] = useState<SummaryRange>('thisMonth');
 
     // 커스텀 선택용 연/월
     const [customYear, setCustomYear] = useState(now.getFullYear());
     const [customMonth, setCustomMonth] = useState(now.getMonth() + 1);
 
-    // “연/월 선택 모달(또는 DatePicker)” 표시 여부
+    // “연/월 선택 모달” 표시 여부
     const [showMonthPicker, setShowMonthPicker] = useState(false);
+    const prevRangeRef = useRef<SummaryRange>('thisMonth');
+
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -93,7 +91,6 @@ export default function TransactionsScreen() {
             { cancelable: true }
         );
     };
-
     const getFilterYearMonth = () => {
         const now = new Date();
         const thisYear = now.getFullYear();
@@ -102,7 +99,6 @@ export default function TransactionsScreen() {
         if (summaryRange === 'thisMonth') {
             return { year: thisYear, month: thisMonth };
         }
-
         if (summaryRange === 'lastMonth') {
             let y = thisYear;
             let m = thisMonth - 1;
@@ -112,14 +108,22 @@ export default function TransactionsScreen() {
             }
             return { year: y, month: m };
         }
-
         if (summaryRange === 'custom') {
             return { year: customYear, month: customMonth };
         }
-
-        // 'all' 일 때는 연/월 필터 안 씀
-        return null;
+        return null; // all
     };
+
+    const filteredTransactions = transactions.filter(t => {
+        if (!t.date) return false;
+        const ym = getFilterYearMonth();
+        if (!ym) return true; // all
+
+        const [y, m] = t.date.split('-').map(Number);
+        if (!y || !m) return false;
+        return y === ym.year && m === ym.month;
+    });
+
 
     const getSummaryTotal = () => {
         if (transactions.length === 0) return 0;
@@ -138,16 +142,22 @@ export default function TransactionsScreen() {
             .reduce((sum, t) => sum + t.amount, 0);
     };
 
-    const filteredTransactions = transactions.filter(t => {
-        if (!t.date) return false;
-        const ym = getFilterYearMonth();
-        if (!ym) return true; // 'all'
+    const openCustomPicker = () => {
+        prevRangeRef.current = summaryRange;
+        setSummaryRange('custom');
+        setShowMonthPicker(true);
+    };
 
-        const [y, m] = t.date.split('-').map(Number);
-        if (!y || !m) return false;
-        return y === ym.year && m === ym.month;
-    });
+    const handlePickerConfirm = (year: number, month: number) => {
+        setCustomYear(year);
+        setCustomMonth(month);
+        setShowMonthPicker(false);
+    };
 
+    const handlePickerCancel = () => {
+        setSummaryRange(prevRangeRef.current);
+        setShowMonthPicker(false);
+    };
 
 
     return (
@@ -156,7 +166,6 @@ export default function TransactionsScreen() {
                 <Text style={theme.typography.title}>내역</Text>
                 {/* 범위 선택 버튼 */}
                 <View style={styles.summaryTabs}>
-                    {/* 이번 달 */}
                     <Pressable
                         style={[
                             styles.summaryTab,
@@ -174,7 +183,6 @@ export default function TransactionsScreen() {
                         </Text>
                     </Pressable>
 
-                    {/* 지난 달 */}
                     <Pressable
                         style={[
                             styles.summaryTab,
@@ -192,7 +200,6 @@ export default function TransactionsScreen() {
                         </Text>
                     </Pressable>
 
-                    {/* 전체 */}
                     <Pressable
                         style={[
                             styles.summaryTab,
@@ -210,16 +217,12 @@ export default function TransactionsScreen() {
                         </Text>
                     </Pressable>
 
-                    {/* 선택 (커스텀) */}
                     <Pressable
                         style={[
                             styles.summaryTab,
                             summaryRange === 'custom' && styles.summaryTabActive,
                         ]}
-                        onPress={() => {
-                            setSummaryRange('custom');
-                            setShowMonthPicker(true); // 👉 여기서 피커 열기
-                        }}
+                        onPress={openCustomPicker}
                     >
                         <Text
                             style={[
@@ -227,10 +230,11 @@ export default function TransactionsScreen() {
                                 summaryRange === 'custom' && styles.summaryTabTextActive,
                             ]}
                         >
-                            선택
+                            선택ㅁㄴㅇㄻㄴ
                         </Text>
                     </Pressable>
                 </View>
+
 
 
                 {/* 요약 카드 */}
@@ -245,7 +249,6 @@ export default function TransactionsScreen() {
                         {getSummaryTotal().toLocaleString()}원
                     </Text>
                 </View>
-
                 {loading ? (
                     <Text>불러오는 중...</Text>
                 ) : transactions.length === 0 ? (
@@ -303,115 +306,15 @@ export default function TransactionsScreen() {
 
             </ScreenContainer>
 
-            <Modal
+            <MonthYearPicker
                 visible={showMonthPicker}
-                transparent
-                animationType="none"
-                onRequestClose={() => setShowMonthPicker(false)}
-            >
-                <Pressable
-                    style={styles.pickerOverlay}
-                    onPress={() => setShowMonthPicker(false)}
-                />
-                <Pressable
-                    style={styles.pickerContainer}
-                    onPress={e => e.stopPropagation()}
-                />
+                year={customYear}
+                month={customMonth}
+                onConfirm={handlePickerConfirm}
+                onCancel={handlePickerCancel}
+                bottomOffset={0}
+            />
 
-                <View style={styles.pickerOverlay}>
-                    <Text style={styles.pickerTitle}>연 / 월 선택</Text>
-
-                    <View style={styles.wheelRow}>
-                        {/* 연도 휠 */}
-                        <View style={styles.wheelColumn}>
-                            <Text style={styles.wheelLabel}>년</Text>
-                            <View style={styles.wheelBox}>
-                                <ScrollView
-                                    showsVerticalScrollIndicator={false}
-                                >
-                                    {years.map(y => (
-                                        <Pressable
-                                            key={y}
-                                            style={[
-                                                styles.wheelItem,
-                                                customYear === y && styles.wheelItemActive,
-                                            ]}
-                                            onPress={() => setCustomYear(y)}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.wheelItemText,
-                                                    customYear === y && styles.wheelItemTextActive,
-                                                ]}
-                                            >
-                                                {y}
-                                            </Text>
-                                        </Pressable>
-                                    ))}
-                                </ScrollView>
-                            </View>
-                        </View>
-
-                        {/* 월 휠 */}
-                        <View style={styles.wheelColumn}>
-                            <Text style={styles.wheelLabel}>월</Text>
-                            <View style={styles.wheelBox}>
-                                <ScrollView
-                                    showsVerticalScrollIndicator={false}
-                                >
-                                    {months.map(m => (
-                                        <Pressable
-                                            key={m}
-                                            style={[
-                                                styles.wheelItem,
-                                                customMonth === m && styles.wheelItemActive,
-                                            ]}
-                                            onPress={() => setCustomMonth(m)}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.wheelItemText,
-                                                    customMonth === m && styles.wheelItemTextActive,
-                                                ]}
-                                            >
-                                                {m}
-                                            </Text>
-                                        </Pressable>
-                                    ))}
-                                </ScrollView>
-                            </View>
-                        </View>
-                    </View>
-
-                    {/* 하단 버튼 */}
-                    <View style={styles.pickerButtonsRow}>
-                        <Pressable
-                            style={styles.pickerButton}
-                            onPress={() => setShowMonthPicker(false)}
-                        >
-                            <Text style={styles.pickerButtonText}>취소</Text>
-                        </Pressable>
-                        <Pressable
-                            style={styles.pickerButtonPrimary}
-                            onPress={() => {
-                                // customYear / customMonth로 필터링 이미 반영됨
-                                setShowMonthPicker(false);
-                            }}
-                        >
-                            <Text style={styles.pickerButtonPrimaryText}>확인</Text>
-                        </Pressable>
-                    </View>
-
-                </View>
-            </Modal>
-
-
-            {/* <Modal visible={showForm} animationType="slide">
-                <TransactionForm
-                    onSaved={handleFormSaved}
-                    onCancel={() => setShowForm(false)}
-                />
-            </Modal> */}
         </>
     );
 }
@@ -492,36 +395,14 @@ const styles = StyleSheet.create({
         color: theme.colors.background,
         lineHeight: theme.typography.sizes.display,
     },
-    summaryCard: {
-        marginTop: 12,
-        marginBottom: 8,
-        padding: 16,
-        borderRadius: 12,
-        backgroundColor: theme.colors.surface, // 혹은 살짝 강조되는 색
-        elevation: 2, // 안드
-        shadowColor: '#000', // iOS
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
-    },
-    summaryTitle: {
-        fontSize: 14,
-        color: theme.colors.textMuted,
-        marginBottom: 4,
-    },
-    summaryAmount: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: theme.colors.primary,
-    },
     summaryTabs: {
         flexDirection: 'row',
-        marginTop: 12,
-        gap: 8,
+        marginTop: theme.spacing.sm,
+        gap: theme.spacing.sm as any,
     },
     summaryTab: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: theme.spacing.xs,
         borderRadius: 999,
         borderWidth: 1,
         borderColor: theme.colors.border,
@@ -531,137 +412,29 @@ const styles = StyleSheet.create({
         borderColor: theme.colors.primary,
     },
     summaryTabText: {
-        fontSize: 12,
+        fontSize: theme.typography.sizes.xs,
         color: theme.colors.textMuted,
     },
     summaryTabTextActive: {
-        color: '#fff',
-    },
-    monthPickerRow: {
-        marginTop: 12,
-        flexDirection: 'row',
-        gap: 8,
-    },
-    monthPickerButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-    },
-    monthPickerText: {
-        fontSize: 14,
-        color: theme.colors.text,
-    },
-
-    pickerOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.4)',  // ✅ 딤
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    pickerContainer: {
-        width: '80%',
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    pickerTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginBottom: 12,
-    },
-    pickerRow: {
-        flexDirection: 'row',
-        gap: 16,
-    },
-    pickerColumn: {
-        flex: 1,
-    },
-    pickerLabel: {
-        fontSize: 14,
-        marginBottom: 8,
-    },
-    pickerOption: {
-        paddingVertical: 6,
-        paddingHorizontal: 8,
-        borderRadius: 6,
-    },
-    pickerOptionActive: {
-        backgroundColor: theme.colors.primary + '22',
-    },
-    pickerOptionText: {
-        fontSize: 14,
-    },
-    pickerOptionTextActive: {
-        color: theme.colors.primary,
+        color: theme.colors.background,
         fontWeight: 'bold',
     },
-    pickerButtonsRow: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        marginTop: 16,
-        gap: 8,
-    },
-    pickerButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-    },
-    pickerButtonText: {
-        fontSize: 14,
-        color: theme.colors.textMuted,
-    },
-    pickerButtonPrimary: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        backgroundColor: theme.colors.primary,
-    },
-    pickerButtonPrimaryText: {
-        fontSize: 14,
-        color: '#fff',
-        fontWeight: 'bold',
-    },
-
-    wheelRow: {
-        flexDirection: 'row',
-        marginTop: 8,
-        marginBottom: 12,
-    },
-    wheelColumn: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    wheelLabel: {
-        fontSize: 13,
-        color: '#888',
-        marginBottom: 4,
-    },
-    wheelBox: {
-        height: 160,              // 스와이프 영역 높이
-        width: '100%',
+    summaryCard: {
+        marginTop: theme.spacing.sm,
+        marginBottom: theme.spacing.sm,
+        padding: theme.spacing.md,
         borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#eee',
-        overflow: 'hidden',
+        backgroundColor: theme.colors.surface,
     },
-    wheelItem: {
-        height: 36,
-        justifyContent: 'center',
-        alignItems: 'center',
+    summaryTitle: {
+        fontSize: theme.typography.sizes.sm,
+        color: theme.colors.textMuted,
+        marginBottom: theme.spacing.xs,
     },
-    wheelItemActive: {
-        backgroundColor: '#f0f4ff',
-    },
-    wheelItemText: {
-        fontSize: 16,
-        color: '#555',
-    },
-    wheelItemTextActive: {
-        color: theme.colors.primary,
+    summaryAmount: {
+        fontSize: theme.typography.sizes.lg,
         fontWeight: 'bold',
+        color: theme.colors.primary,
     },
-
 
 });

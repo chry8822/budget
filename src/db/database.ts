@@ -1,7 +1,7 @@
 // src/db/database.ts
 import * as SQLite from 'expo-sqlite';
-import { DB_NAME, CREATE_TRANSACTIONS_TABLE } from './schema';
-import { MainCategory, PaymentMethod, TransactionType } from '../types/transaction';
+import { DB_NAME, CREATE_TRANSACTIONS_TABLE, CREATE_CATEGORIES_TABLE } from './schema';
+import { MAIN_CATEGORIES, MainCategory, PaymentMethod, TransactionType } from '../types/transaction';
 
 export type Transaction = {
   id?: number;
@@ -20,13 +20,14 @@ const db = SQLite.openDatabaseSync(DB_NAME); // SQLiteDatabase 타입[web:130][w
 
 // 앱 시작 시 테이블을 준비하는 함수
 export async function initDatabase(): Promise<void> {
-  try {
-    // execAsync: 여러 SQL을 한꺼번에 실행할 수 있음
-    await db.execAsync(CREATE_TRANSACTIONS_TABLE);
-    console.log('transactions 테이블 준비 완료');
-  } catch (error) {
-    console.error('테이블 생성 중 에러', error);
-    throw error;
+  await db.execAsync(CREATE_TRANSACTIONS_TABLE);
+  await db.execAsync(CREATE_CATEGORIES_TABLE);
+
+  for (const name of MAIN_CATEGORIES) {
+    await db.runAsync(
+      `INSERT OR IGNORE INTO categories (name, isDefault, createdAt) VALUES (?, 1, ?);`,
+      [name, new Date().toISOString()]
+    );
   }
 }
 
@@ -246,4 +247,22 @@ export async function updateTransaction(t: Transaction): Promise<void> {
   }
 }
 
+export type Category = { id: number; name: string; isDefault: number };
 
+export async function getCategories(): Promise<Category[]> {
+  return db.getAllAsync<Category>(
+    `SELECT id, name, isDefault FROM categories ORDER BY isDefault DESC, createdAt ASC;`,
+    []
+  );
+}
+
+export async function addCategory(name: string): Promise<void> {
+  await db.runAsync(
+    `INSERT INTO categories (name, createdAt) VALUES (?, ?);`,
+    [name, new Date().toISOString()]
+  );
+}
+
+export async function deleteCategory(id: number): Promise<void> {
+  await db.runAsync(`DELETE FROM categories WHERE id = ?;`, [id]);
+}

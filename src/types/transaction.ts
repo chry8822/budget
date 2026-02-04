@@ -13,7 +13,7 @@ export const MAIN_CATEGORIES = [
   '기타',
 ] as const;
 
-export type MainCategory = (typeof MAIN_CATEGORIES)[number];
+export type MainCategory = (typeof MAIN_CATEGORIES)[number] | string;
 
 export const PAYMENT_METHODS = [
   '현금',

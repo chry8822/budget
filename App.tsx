@@ -14,6 +14,7 @@ import AddTransactionScreen from './src/screens/AddTransactionScreen';
 import { initDatabase } from './src/db/database';
 import theme from './src/theme';
 import EditTransactionScreen from './src/screens/EditTransactionScreen';
+import SummaryScreen from './src/screens/SummaryScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -35,6 +36,7 @@ function MainTabs() {
           if (route.name === 'Home') iconName = 'home-outline';
           if (route.name === 'Transactions') iconName = 'list-outline';
           if (route.name === 'Stats') iconName = 'stats-chart-outline';
+          if (route.name === 'Summary') iconName = 'pie-chart-outline';
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -44,6 +46,7 @@ function MainTabs() {
           if (route.name === 'Home') label = '홈';
           if (route.name === 'Transactions') label = '내역';
           if (route.name === 'Stats') label = '통계';
+          if (route.name === 'Summary') label = '요약';
 
           return <Text style={{ color, fontSize: 11 }}>{label}</Text>;
         },
@@ -52,6 +55,7 @@ function MainTabs() {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Transactions" component={TransactionsScreen} />
       <Tab.Screen name="Stats" component={StatsScreen} />
+      <Tab.Screen name="Summary" component={SummaryScreen} />
     </Tab.Navigator>
   );
 }

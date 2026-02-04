@@ -11,7 +11,7 @@ type ScreenContainerProps = {
 
 export default function ScreenContainer({ children, style }: ScreenContainerProps) {
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
             <View style={[styles.inner, style]}>{children}</View>
         </SafeAreaView>
     );
@@ -25,7 +25,5 @@ const styles = StyleSheet.create({
     inner: {
         flex: 1,
         paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.lg,
-
     },
 });
