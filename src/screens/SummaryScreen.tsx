@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import ScreenContainer from '../components/common/ScreenContainer';
 import theme from '../theme';
 import {
@@ -11,6 +11,8 @@ import {
     MonthlySummary,
 } from '../db/database';
 import { useTransactionChange } from '../components/common/TransactionChangeContext';
+import ScrollHint from '../components/common/ScrollHint';
+import { useScrollability } from '../hooks/useScrollability';
 
 export default function SummaryScreen() {
     const { changeTick } = useTransactionChange();
@@ -29,6 +31,7 @@ export default function SummaryScreen() {
     const [prevMonthlySummary, setPrevMonthlySummary] = useState<MonthlySummary | null>(null);
     const [prevTopCategory, setPrevTopCategory] = useState<CategorySummaryRow | null>(null);
     const [prevTopPayment, setPrevTopPayment] = useState<PaymentSummaryRow | null>(null);
+    const { isScrollable, onContentSizeChange, onLayout, scrollHintOpacity, onScroll } = useScrollability(8);
 
     const getDaysInMonth = (y: number, m: number) =>
         new Date(y, m, 0).getDate();
@@ -106,15 +109,21 @@ export default function SummaryScreen() {
 
     return (
         <ScreenContainer>
-            <Text style={styles.title}>요약</Text>
-            <Text style={styles.subtitle}>이번 달 지출 요약이에요.</Text>
+            <ScrollView
+                onLayout={onLayout}
+                onContentSizeChange={onContentSizeChange}
+                onScroll={onScroll}
+                scrollEventThrottle={16}
+            >
+                <Text style={styles.title}>요약</Text>
+                <Text style={styles.subtitle}>이번 달 지출 요약이에요.</Text>
 
-            {/* TODO: 여기 연/월 선택 UI (지금 만든 커스텀 피커 재사용) */}
+                {/* TODO: 여기 연/월 선택 UI (지금 만든 커스텀 피커 재사용) */}
 
-            {loading ? (
-                <ActivityIndicator />
-            ) : (
-                <>
+                {loading ? (
+                    <ActivityIndicator />
+                ) : (
+                    <>
                     <View style={styles.card}>
                         <Text style={styles.cardTitle}>총 지출</Text>
                         <Text style={styles.cardAmount}>
@@ -236,13 +245,10 @@ export default function SummaryScreen() {
                         )}
 
                     </View>
-
-
-
-
-                </>
-
-            )}
+                    </>
+                )}
+            </ScrollView>
+            <ScrollHint visible={isScrollable} opacity={scrollHintOpacity} />
         </ScreenContainer>
     );
 }

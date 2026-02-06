@@ -15,7 +15,6 @@ export const CREATE_TRANSACTIONS_TABLE = `
   );
 `;
 
-
 export const CREATE_CATEGORIES_TABLE = `
   CREATE TABLE IF NOT EXISTS categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,4 +22,16 @@ export const CREATE_CATEGORIES_TABLE = `
     isDefault INTEGER NOT NULL DEFAULT 0,
     createdAt TEXT NOT NULL
   );
+`;
+
+export const CREATE_BUDGETS_TABLE = `
+CREATE TABLE IF NOT EXISTS budgets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  year INTEGER NOT NULL,
+  month INTEGER NOT NULL,
+  mainCategory TEXT,          -- NULL이면 "전체 예산"
+  amount INTEGER NOT NULL,    -- 예산 금액 (원)
+  createdAt TEXT NOT NULL,
+  UNIQUE (year, month, mainCategory)
+);
 `;

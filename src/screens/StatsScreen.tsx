@@ -25,6 +25,8 @@ import {
 } from '../db/database';
 import theme from '../theme';
 import MonthYearPicker from '../components/common/MonthYearPicker';
+import ScrollHint from '../components/common/ScrollHint';
+import { useScrollability } from '../hooks/useScrollability';
 
 type StatsRange = 'thisMonth' | 'lastMonth' | 'custom';
 
@@ -67,6 +69,7 @@ export default function StatsScreen() {
     const [paymentRows, setPaymentRows] = useState<PaymentSummaryRow[]>([]);
 
     const [loading, setLoading] = useState(false);
+    const { isScrollable, onContentSizeChange, onLayout, scrollHintOpacity, onScroll } = useScrollability(8);
 
     // 카테고리 데이터 정리
     const totalForPie = categoryRows.reduce(
@@ -187,6 +190,10 @@ export default function StatsScreen() {
                 <ScrollView
                     contentContainerStyle={{ paddingBottom: theme.spacing.lg }}
                     showsVerticalScrollIndicator={false}
+                    onLayout={onLayout}
+                    onContentSizeChange={onContentSizeChange}
+                    onScroll={onScroll}
+                    scrollEventThrottle={16}
                 >
                     <Text style={styles.title}>통계</Text>
 
@@ -431,6 +438,7 @@ export default function StatsScreen() {
                         </View>
                     )}
                 </ScrollView>
+                <ScrollHint visible={isScrollable} opacity={scrollHintOpacity} />
             </ScreenContainer>
 
             <MonthYearPicker

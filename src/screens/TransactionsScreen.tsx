@@ -8,21 +8,24 @@ import {
 } from 'react-native';
 import ScreenContainer from '../components/common/ScreenContainer';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { getAllTransactions, Transaction, deleteTransactionById } from '../db/database';
 import { Ionicons } from '@expo/vector-icons';
 import theme from '../theme';
-import { Alert } from 'react-native';
+import { Alert, ScrollView } from 'react-native';
 import MonthYearPicker from '../components/common/MonthYearPicker';
 import { useTransactionChange } from '../components/common/TransactionChangeContext';
+import AnimatedButton from '../components/common/AnimatedButton';
+import { useScrollability } from '../hooks/useScrollability';
+import ScrollHint from '../components/common/ScrollHint';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type SummaryRange = 'thisMonth' | 'lastMonth' | 'all' | 'custom';
 
 export default function TransactionsScreen() {
     const { notifyChanged } = useTransactionChange();
+    const { isScrollable, onContentSizeChange, onLayout, scrollHintOpacity, onScroll } = useScrollability(8);
 
     const now = new Date();
     const [summaryRange, setSummaryRange] = useState<SummaryRange>('thisMonth');
@@ -167,6 +170,7 @@ export default function TransactionsScreen() {
     return (
         <>
             <ScreenContainer>
+
                 <Text style={theme.typography.title}>내역</Text>
                 {/* 범위 선택 버튼 */}
                 <View style={styles.summaryTabs}>
@@ -234,7 +238,7 @@ export default function TransactionsScreen() {
                                 summaryRange === 'custom' && styles.summaryTabTextActive,
                             ]}
                         >
-                            선택ㅁㄴㅇㄻㄴ
+                            선택ㄴ
                         </Text>
                     </Pressable>
                 </View>
@@ -245,6 +249,7 @@ export default function TransactionsScreen() {
                 <View style={styles.summaryCard}>
                     <Text style={styles.summaryTitle}>
                         {summaryRange === 'thisMonth' && '이번 달 지출'}
+
                         {summaryRange === 'lastMonth' && '지난 달 지출'}
                         {summaryRange === 'all' && '전체 지출'}
                         {summaryRange === 'custom' && `${customYear}년 ${customMonth}월 지출`}
@@ -258,56 +263,63 @@ export default function TransactionsScreen() {
                 ) : transactions.length === 0 ? (
                     <Text style={styles.emptyText}>아직 기록된 내역이 없습니다. 아래 + 버튼으로 첫 지출을 추가해 보세요.</Text>
                 ) : (
-                    <FlatList
-                        data={filteredTransactions}
-                        keyExtractor={item => String(item.id)}
-                        renderItem={({ item }) => (
-                            <Pressable
-                                onPress={() =>
-                                    item.id && navigation.navigate('EditTransaction', { id: item.id })
-                                }
-                            >
-                                <View style={styles.itemRow}>
-                                    <View style={styles.itemLeft}>
-                                        <Text style={styles.itemCategory}>{item.mainCategory}</Text>
-                                        {item.subCategory && (
-                                            <Text style={styles.itemSubCategory}>{item.subCategory}</Text>
-                                        )}
-                                        {item.memo && (
-                                            <Text style={styles.itemMemo}>{item.memo}</Text>
-                                        )}
-                                    </View>
-
-                                    <View style={styles.itemRight}>
-                                        <View style={styles.amountRow}>
-                                            <Text style={styles.itemAmount}>
-                                                -{item.amount.toLocaleString()}원
-                                            </Text>
+                    <>
+                        <FlatList
+                            onLayout={onLayout}
+                            onContentSizeChange={onContentSizeChange}
+                            onScroll={onScroll}
+                            scrollEventThrottle={16}
+                            data={filteredTransactions}
+                            keyExtractor={item => String(item.id)}
+                            renderItem={({ item }) => (
+                                <Pressable
+                                    onPress={() =>
+                                        item.id && navigation.navigate('EditTransaction', { id: item.id })
+                                    }
+                                >
+                                    <View style={styles.itemRow}>
+                                        <View style={styles.itemLeft}>
+                                            <Text style={styles.itemCategory}>{item.mainCategory}</Text>
+                                            {item.subCategory && (
+                                                <Text style={styles.itemSubCategory}>{item.subCategory}</Text>
+                                            )}
+                                            {item.memo && (
+                                                <Text style={styles.itemMemo}>{item.memo}</Text>
+                                            )}
                                         </View>
-                                        <Text style={styles.itemDate}>{item.date}</Text>
-                                        <Text style={styles.itemPayment}>{item.paymentMethod}</Text>
-                                        <Pressable
-                                            style={styles.deleteButton}
-                                            onPress={() => handleDelete(item.id)}
-                                            hitSlop={8}
-                                        >
-                                            <Ionicons name="trash-outline" size={18} color={theme.colors.textMuted} />
-                                        </Pressable>
+
+                                        <View style={styles.itemRight}>
+                                            <View style={styles.amountRow}>
+                                                <Text style={styles.itemAmount}>
+                                                    -{item.amount.toLocaleString()}원
+                                                </Text>
+                                            </View>
+                                            <Text style={styles.itemDate}>{item.date}</Text>
+                                            <Text style={styles.itemPayment}>{item.paymentMethod}</Text>
+                                            <Pressable
+                                                style={styles.deleteButton}
+                                                onPress={() => handleDelete(item.id)}
+                                                hitSlop={8}
+                                            >
+                                                <Ionicons name="trash-outline" size={18} color={theme.colors.textMuted} />
+                                            </Pressable>
+                                        </View>
                                     </View>
-                                </View>
-                            </Pressable>
-                        )}
-                    />
+                                </Pressable>
+                            )}
+
+                        />
+                        <ScrollHint
+                            visible={isScrollable}
+                            opacity={scrollHintOpacity}
+                        />
+                    </>
                 )}
 
                 {/* 플로팅 + 버튼 */}
-                <Pressable
-                    style={styles.fab}
-                    onPress={() => navigation.navigate('AddTransaction')}
-                >
+                <AnimatedButton onPress={() => navigation.navigate('AddTransaction')} style={styles.fab}>
                     <Text style={styles.fabText}>＋</Text>
-                </Pressable>
-
+                </AnimatedButton>
             </ScreenContainer>
 
             <MonthYearPicker

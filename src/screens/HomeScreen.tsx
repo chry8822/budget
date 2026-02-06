@@ -7,32 +7,49 @@ import {
     MonthlySummary,
     getRecentTransactionsOfMonth,
     Transaction,
+    getTodayExpenseTotal,
+    DailySummaryRow,
+    getDailySummaryOfMonth
 } from '../db/database';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
+import ScrollHint from '../components/common/ScrollHint';
+import { RootStackParamList } from '../navigation/types';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import AnimatedButton from '../components/common/AnimatedButton';
+import { useScrollability } from '../hooks/useScrollability';
 
+type Props = NativeStackScreenProps<RootStackParamList>;
 
-function getThisMonthInfo() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1; // 0~11 -> 1~12
-    const firstDay = new Date(year, month - 1, 1);
-    const lastDay = new Date(year, month, 0);
-    const today = now.getDate();
+export default function HomeScreen({ navigation }: Props) {
+    const { isScrollable, onContentSizeChange, onLayout, scrollHintOpacity, onScroll } = useScrollability(8);
 
-    const totalDays = lastDay.getDate();
-    const remainingDays = totalDays - today + 1;
+    const [{ year, month, remainingDays, todayStr }] = useState(getThisMonthInfo);
+    const [todayExpense, setTodayExpense] = useState(0);
 
-    return { year, month, totalDays, remainingDays };
-}
-
-export default function HomeScreen() {
-    const [{ year, month, remainingDays }] = useState(getThisMonthInfo);
     const [summary, setSummary] = useState<MonthlySummary | null>(null);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [recentRows, setRecentRows] = useState<Transaction[]>([]);
+    const [dailySummary, setDailySummary] = useState<DailySummaryRow[]>([]);
+    const [isAtTop, setIsAtTop] = useState(true); // 스크롤 Y가 0 근처인지
     const scaleAnim = useRef(new Animated.Value(1)).current;
+    const totalExpense = summary?.totalExpense ?? 0;
+    const topCategories = summary?.byCategory.slice(0, 3) ?? [];
+
+    const last3 = dailySummary.slice(-3);  // 날짜 ASC라면 뒤에서 3개
+    const max = Math.max(...last3.map(r => r.amount), 1);
+
+    useEffect(() => {
+        startBreathingAnimation();
+    }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadSummary();
+        }, [year, month])
+    );
 
     const startBreathingAnimation = () => {
         Animated.loop(
@@ -56,11 +73,13 @@ export default function HomeScreen() {
         try {
             const data = await getMonthlySummary(year, month);
             const recents = await getRecentTransactionsOfMonth(year, month, 5);
+            const todayTotal = await getTodayExpenseTotal(todayStr);
+            const dailyRows = await getDailySummaryOfMonth(year, month);
 
-            setRecentRows(recents);
             setSummary(data);
-        } catch (e) {
-            console.error(e);
+            setRecentRows(recents);
+            setTodayExpense(todayTotal);
+            setDailySummary(dailyRows);
         } finally {
             setLoading(false);
         }
@@ -72,18 +91,25 @@ export default function HomeScreen() {
         setRefreshing(false);
     };
 
-    useEffect(() => {
-        startBreathingAnimation();
-    }, []);
 
-    useFocusEffect(
-        useCallback(() => {
-            loadSummary();
-        }, [year, month])
-    );
+    function getThisMonthInfo() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const today = now.getDate();
 
-    const totalExpense = summary?.totalExpense ?? 0;
-    const topCategories = summary?.byCategory.slice(0, 3) ?? [];
+        const monthStr = month.toString().padStart(2, '0');
+        const dayStr = today.toString().padStart(2, '0');
+        const todayStr = `${year}-${monthStr}-${dayStr}`;
+
+        const firstDay = new Date(year, month - 1, 1);
+        const lastDay = new Date(year, month, 0);
+        const totalDays = lastDay.getDate();
+        const remainingDays = totalDays - today + 1;
+
+        return { year, month, remainingDays, todayStr };
+    }
+
 
     return (
         <ScreenContainer>
@@ -91,7 +117,12 @@ export default function HomeScreen() {
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
                 }
+                onContentSizeChange={onContentSizeChange}
+                onLayout={onLayout}
+                onScroll={onScroll}
+                scrollEventThrottle={16}
             >
+
                 <Animated.Text
                     style={[
                         styles.refreshHint,
@@ -106,9 +137,13 @@ export default function HomeScreen() {
                         {year}년 {month}월 가계 요약
                     </Text>
                     <Text style={styles.subText}>
-                        이번 달 남은 일수: {remainingDays}일
+                        <Ionicons name="calendar-number-outline" size={16} color={theme.colors.textMuted} /> 이번 달 남은 일수: <Text style={{ fontWeight: 'bold' }}>{remainingDays}일</Text>
+                    </Text>
+                    <Text style={styles.todayText}>
+                        <Ionicons name="alert-circle-outline" size={16} color={theme.colors.primary} /> 오늘 <Text style={{ color: theme.colors.primary }}>{todayExpense.toLocaleString()}</Text> 원 썼어요
                     </Text>
                 </View>
+
 
                 {/* 총 지출 박스 */}
                 <View style={styles.card}>
@@ -120,9 +155,42 @@ export default function HomeScreen() {
                             {totalExpense.toLocaleString()}원
                         </Text>
                     )}
+                    {/* 미니 막대 그래프 */}
+                    {!loading && last3.length > 0 && (
+                        <View style={styles.miniChartContainer}>
+                            <Text style={styles.miniChartTitle}>
+                                <Text >최근 3일 지출</Text><Text style={{ fontSize: theme.typography.sizes.xs, color: theme.colors.textMuted }}> ({month}월)</Text>
+                            </Text>
+
+                            <View style={styles.miniChartBars}>
+                                {last3.map(row => {
+                                    const heightPercent = (row.amount / max) * 100;
+                                    const day = row.date.split('-')[2]; // '03'
+
+                                    return (
+                                        <View key={row.date} style={styles.miniBarWrapper}>
+                                            <View
+                                                style={[
+                                                    styles.miniBar,
+                                                    { height: `${heightPercent}%` },
+                                                ]}
+                                            />
+                                            <Text style={styles.miniBarLabel}>
+                                                <Text style={{ fontWeight: 'bold' }}>{day}일</Text>
+                                                <Text style={{ fontSize: theme.typography.sizes.xs, color: theme.colors.textMuted }}>({row.amount.toLocaleString()}원)</Text>
+                                            </Text>
+
+                                        </View>
+                                    );
+                                })}
+                            </View>
+                            <Text style={styles.miniBarNotice}>*막대가 높을수록 많이 쓴 날이에요</Text>
+                        </View>
+                    )}
+
                 </View>
 
-                <View style={styles.card}>
+                <View style={[styles.card, { paddingBottom: theme.spacing.xs }]}>
                     <Text style={styles.cardTitle}>최근 지출</Text>
 
                     {loading ? (
@@ -172,7 +240,20 @@ export default function HomeScreen() {
                 </View>
 
             </ScrollView>
-            {/* 나중에: 고정/변동, 그래프 섹션 추가 가능 */}
+
+            <View style={styles.addButtonWrapper}>
+                <AnimatedButton
+                    onPress={() => navigation.navigate('AddTransaction')}
+                    style={styles.addButton}
+                >
+                    <Text style={styles.addButtonText}>지출 추가하기</Text>
+                </AnimatedButton>
+            </View>
+
+            <ScrollHint
+                visible={isScrollable}
+                opacity={scrollHintOpacity}
+            />
         </ScreenContainer>
     );
 }
@@ -199,18 +280,12 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         padding: theme.spacing.md,
         marginBottom: theme.spacing.md,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
     },
     cardTitle: {
         ...theme.typography.subtitle,
+        fontSize: 20,
         fontWeight: 'bold',
         marginBottom: theme.spacing.sm,
-    },
-    cardHint: {
-        ...theme.typography.body,
-        color: theme.colors.textMuted,
-        marginTop: theme.spacing.sm,
     },
     totalAmount: {
         fontSize: theme.typography.sizes.xxl,
@@ -238,8 +313,8 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingVertical: theme.spacing.xs,
-        borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: theme.colors.border,
+        borderTopWidth: 1
     },
     recentLeft: {
         flex: 1,
@@ -267,5 +342,77 @@ const styles = StyleSheet.create({
         color: theme.colors.textMuted,
         marginTop: 2,
     },
+    addButtonWrapper: {
+        marginTop: theme.spacing.sm,
+        marginBottom: theme.spacing.lg,
+    },
+
+    addButton: {
+        backgroundColor: theme.colors.primary,
+        paddingVertical: theme.spacing.md,
+        borderRadius: 999,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    addButtonText: {
+        fontSize: theme.typography.sizes.md,
+        color: theme.colors.background,
+        fontWeight: 'bold',
+    },
+    todayText: {
+        ...theme.typography.body,
+        marginTop: theme.spacing.xs,
+        color: theme.colors.text,      // 필요하면 primarySoft 같은 색으로 바꿔도 됨
+    },
+    miniChartContainer: {
+        marginTop: theme.spacing.md,
+    },
+
+
+    miniChartTitle: {
+        fontSize: theme.typography.sizes.sm,
+        fontWeight: 'bold',
+        color: theme.colors.text,
+        marginBottom: theme.spacing.xl,
+        paddingBottom: theme.spacing.sm,
+        borderBottomColor: theme.colors.border,
+        borderBottomWidth: 1
+    },
+
+
+    miniChartBars: {
+        height: 40,
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+    },
+
+    miniBarWrapper: {
+        flex: 1,
+        marginHorizontal: 2,
+        justifyContent: 'flex-end',
+    },
+
+    miniBar: {
+        width: '100%',
+        borderRadius: 2,
+        backgroundColor: theme.colors.primary,
+    },
+
+    miniBarLabel: {
+        marginTop: 4,
+        fontSize: theme.typography.sizes.sm,
+        color: theme.colors.textMuted,
+        textAlign: 'center',
+    },
+
+    miniBarNotice: {
+        ...theme.typography.body,
+        fontSize: theme.typography.sizes.xs,
+        color: theme.colors.textMuted,
+        textAlign: 'right',
+        paddingTop: theme.spacing.sm,
+    },
 
 });
+`   `

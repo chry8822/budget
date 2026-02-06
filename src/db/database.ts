@@ -1,6 +1,6 @@
 // src/db/database.ts
 import * as SQLite from 'expo-sqlite';
-import { DB_NAME, CREATE_TRANSACTIONS_TABLE, CREATE_CATEGORIES_TABLE } from './schema';
+import { DB_NAME, CREATE_TRANSACTIONS_TABLE, CREATE_CATEGORIES_TABLE, CREATE_BUDGETS_TABLE } from './schema';
 import { MAIN_CATEGORIES, MainCategory, PaymentMethod, TransactionType } from '../types/transaction';
 
 export type Transaction = {
@@ -23,6 +23,7 @@ const db = SQLite.openDatabaseSync(DB_NAME); // SQLiteDatabase 타입[web:130][w
 export async function initDatabase(): Promise<void> {
   await db.execAsync(CREATE_TRANSACTIONS_TABLE);
   await db.execAsync(CREATE_CATEGORIES_TABLE);
+  await db.execAsync(CREATE_BUDGETS_TABLE);
 
   for (const name of MAIN_CATEGORIES) {
     await db.runAsync(
@@ -304,3 +305,53 @@ export async function getRecentTransactionsOfMonth(
   }
 }
 
+// 오늘 지출 합계
+export async function getTodayExpenseTotal(dateString: string): Promise<number> {
+  try {
+    const rows = await db.getAllAsync<{ total: number }>(
+      `
+      SELECT SUM(amount) as total
+      FROM transactions
+      WHERE type = 'expense'
+        AND date = ?;
+      `,
+      [dateString]
+    );
+    return rows[0]?.total ?? 0;
+  } catch (error) {
+    console.error('getTodayExpenseTotal 에러', error);
+    throw error;
+  }
+}
+
+
+export type DailySummaryRow = {
+  date: string;   // '2026-02-03'
+  amount: number;
+};
+
+export async function getDailySummaryOfMonth(
+  year: number,
+  month: number
+): Promise<DailySummaryRow[]> {
+  const monthStr = month.toString().padStart(2, '0');
+  const prefix = `${year}-${monthStr}`; // 2026-02
+
+  try {
+    const rows = await db.getAllAsync<DailySummaryRow>(
+      `
+      SELECT date, SUM(amount) AS amount
+      FROM transactions
+      WHERE type = 'expense'
+        AND date LIKE ?
+      GROUP BY date
+      ORDER BY date ASC;
+      `,
+      [`${prefix}%`]
+    );
+    return rows;
+  } catch (error) {
+    console.error('getDailySummaryOfMonth 에러', error);
+    throw error;
+  }
+}

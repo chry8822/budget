@@ -10,6 +10,7 @@ export const MAIN_CATEGORIES = [
   '의료/건강',
   '문화/여가',
   '금융/보험',
+  '공과금',
   '기타',
 ] as const;
 
