@@ -15,6 +15,15 @@ export type Transaction = {
   createdAt: string;     // new Date().toISOString()
 };
 
+export type Budget = {
+  id?: number;
+  year: number;
+  month: number;
+  mainCategory: string | null;  // null => 전체 예산
+  amount: number;
+  createdAt: string;
+};
+
 
 // 새 버전: 동기 방식으로 DB 핸들 얻기
 const db = SQLite.openDatabaseSync(DB_NAME); // SQLiteDatabase 타입[web:130][web:170]
