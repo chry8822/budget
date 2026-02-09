@@ -13,6 +13,7 @@ import { RootStackParamList } from '../navigation/types';
 import { getAllTransactions, Transaction, deleteTransactionById } from '../db/database';
 import { Ionicons } from '@expo/vector-icons';
 import theme from '../theme';
+import { formatWon } from '../utils/format';
 import { Alert, ScrollView } from 'react-native';
 import MonthYearPicker from '../components/common/MonthYearPicker';
 import { useTransactionChange } from '../components/common/TransactionChangeContext';
@@ -255,7 +256,7 @@ export default function TransactionsScreen() {
                         {summaryRange === 'custom' && `${customYear}년 ${customMonth}월 지출`}
                     </Text>
                     <Text style={styles.summaryAmount}>
-                        {getSummaryTotal().toLocaleString()}원
+                        {formatWon(getSummaryTotal())}
                     </Text>
                 </View>
                 {loading ? (
@@ -291,7 +292,7 @@ export default function TransactionsScreen() {
                                         <View style={styles.itemRight}>
                                             <View style={styles.amountRow}>
                                                 <Text style={styles.itemAmount}>
-                                                    -{item.amount.toLocaleString()}원
+                                                    -{formatWon(item.amount)}
                                                 </Text>
                                             </View>
                                             <Text style={styles.itemDate}>{item.date}</Text>

@@ -12,6 +12,7 @@ import {
     getDailySummaryOfMonth
 } from '../db/database';
 import { useFocusEffect } from '@react-navigation/native';
+import { formatWon } from '../utils/format';
 import { useCallback } from 'react';
 import ScrollHint from '../components/common/ScrollHint';
 import { RootStackParamList } from '../navigation/types';
@@ -34,7 +35,11 @@ export default function HomeScreen({ navigation }: Props) {
     const [recentRows, setRecentRows] = useState<Transaction[]>([]);
     const [dailySummary, setDailySummary] = useState<DailySummaryRow[]>([]);
     const [isAtTop, setIsAtTop] = useState(true); // 스크롤 Y가 0 근처인지
+    
     const scaleAnim = useRef(new Animated.Value(1)).current;
+    const barAnim = useRef(new Animated.Value(0)).current;
+    const scrollViewRef = useRef<ScrollView>(null);
+
     const totalExpense = summary?.totalExpense ?? 0;
     const topCategories = summary?.byCategory.slice(0, 3) ?? [];
 
@@ -67,6 +72,19 @@ export default function HomeScreen({ navigation }: Props) {
             ])
         ).start();
     };
+
+    // 데이터 로드 후 막대 애니메이션 시작
+    useEffect(() => {
+        if (dailySummary.length > 0) {
+            barAnim.setValue(0);
+            Animated.timing(barAnim, {
+                toValue: 1,
+                duration: 600,
+                useNativeDriver: false,
+            }).start();
+        }
+    }, [dailySummary]);
+
 
     const loadSummary = async () => {
         setLoading(true);
@@ -114,6 +132,7 @@ export default function HomeScreen({ navigation }: Props) {
     return (
         <ScreenContainer>
             <ScrollView
+                ref={scrollViewRef}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
                 }
@@ -140,7 +159,7 @@ export default function HomeScreen({ navigation }: Props) {
                         <Ionicons name="calendar-number-outline" size={16} color={theme.colors.textMuted} /> 이번 달 남은 일수: <Text style={{ fontWeight: 'bold' }}>{remainingDays}일</Text>
                     </Text>
                     <Text style={styles.todayText}>
-                        <Ionicons name="alert-circle-outline" size={16} color={theme.colors.primary} /> 오늘 <Text style={{ color: theme.colors.primary }}>{todayExpense.toLocaleString()}</Text> 원 썼어요
+                        <Ionicons name="alert-circle-outline" size={16} color={theme.colors.primary} /> 오늘 <Text style={{ color: theme.colors.primary }}>{formatWon(todayExpense)}</Text> 썼어요
                     </Text>
                 </View>
 
@@ -152,7 +171,7 @@ export default function HomeScreen({ navigation }: Props) {
                         <Text style={styles.bodyText}>계산 중...</Text>
                     ) : (
                         <Text style={styles.totalAmount}>
-                            {totalExpense.toLocaleString()}원
+                            {formatWon(totalExpense)}
                         </Text>
                     )}
                     {/* 미니 막대 그래프 */}
@@ -166,18 +185,24 @@ export default function HomeScreen({ navigation }: Props) {
                                 {last3.map(row => {
                                     const heightPercent = (row.amount / max) * 100;
                                     const day = row.date.split('-')[2]; // '03'
+                                    const BAR_CONTAINER_HEIGHT = 40;
+                                    const targetHeight = (heightPercent / 100) * BAR_CONTAINER_HEIGHT;
+                                    const animatedHeight = barAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0, targetHeight],
+                                    });
 
                                     return (
                                         <View key={row.date} style={styles.miniBarWrapper}>
-                                            <View
+                                            <Animated.View
                                                 style={[
                                                     styles.miniBar,
-                                                    { height: `${heightPercent}%` },
+                                                    { height: animatedHeight },
                                                 ]}
                                             />
                                             <Text style={styles.miniBarLabel}>
                                                 <Text style={{ fontWeight: 'bold' }}>{day}일</Text>
-                                                <Text style={{ fontSize: theme.typography.sizes.xs, color: theme.colors.textMuted }}>({row.amount.toLocaleString()}원)</Text>
+                                                <Text style={{ fontSize: theme.typography.sizes.xs, color: theme.colors.textMuted }}>({formatWon(row.amount)})</Text>
                                             </Text>
 
                                         </View>
@@ -210,7 +235,7 @@ export default function HomeScreen({ navigation }: Props) {
                                 </View>
                                 <View style={styles.recentRight}>
                                     <Text style={styles.recentAmount}>
-                                        {row.amount.toLocaleString()}원
+                                        {formatWon(row.amount)}
                                     </Text>
                                     <Text style={styles.recentDate}>{row.date}</Text>
                                 </View>
@@ -232,7 +257,7 @@ export default function HomeScreen({ navigation }: Props) {
                             <View key={cat.mainCategory} style={styles.categoryRow}>
                                 <Text style={styles.categoryName}>{cat.mainCategory}</Text>
                                 <Text style={styles.categoryAmount}>
-                                    {cat.amount.toLocaleString()}원
+                                    {formatWon(cat.amount)}
                                 </Text>
                             </View>
                         ))
@@ -251,6 +276,7 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
 
             <ScrollHint
+                scrollRef={scrollViewRef}
                 visible={isScrollable}
                 opacity={scrollHintOpacity}
             />

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { Entypo } from '@expo/vector-icons';
 import theme from '../../theme';
+import { ScrollView } from 'react-native';
 
 type AnimatedValue = Animated.Value | Animated.AnimatedInterpolation<number>;
 
@@ -10,9 +11,11 @@ type Props = {
     top?: number;
     bottom?: number;
     visible?: boolean;
+    scrollRef?: React.RefObject<ScrollView | null>;
+    scrollAmount?: number;
 };
 
-export default function ScrollHint({ opacity, top, bottom, visible = true }: Props) {
+export default function ScrollHint({ opacity, top, bottom, visible = true, scrollRef, scrollAmount }: Props) {
     const translateY = useRef(new Animated.Value(0)).current;
     const arrow1Opacity = useRef(new Animated.Value(0.3)).current;
     const arrow2Opacity = useRef(new Animated.Value(0.3)).current;
@@ -55,11 +58,21 @@ export default function ScrollHint({ opacity, top, bottom, visible = true }: Pro
 
     const arrowOpacities: AnimatedValue[] = [arrow1Opacity, arrow2Opacity, arrow3Opacity];
 
+    const onPress = () => {
+        if (scrollRef?.current) {
+            scrollRef.current.scrollTo({
+                y: scrollAmount ?? 200,       // 현재 위치에서 아래로 이동하려면 추가 처리 필요
+                animated: true,
+            });
+        }
+    };
+
     if (!visible) return null;
 
     return (
+
         <Animated.View
-            pointerEvents="none"
+            pointerEvents="box-none"
             style={[
                 styles.container,
                 {
@@ -70,15 +83,17 @@ export default function ScrollHint({ opacity, top, bottom, visible = true }: Pro
                 },
             ]}
         >
-            <View style={styles.mouseShell}>
-                <View style={styles.mouseWheel} />
-            </View>
+            <Pressable onPress={onPress} style={{ alignItems: 'center' }}>
+                <View style={styles.mouseShell}>
+                    <View style={styles.mouseWheel} />
+                </View>
 
-            {arrowOpacities.map((arrowOpacity, index) => (
-                <Animated.View key={index} style={[styles.arrowWrapper, { opacity: arrowOpacity }]}>
-                    <Entypo name="chevron-down" size={14} color="rgba(0,0,0,0.5)" />
-                </Animated.View>
-            ))}
+                {arrowOpacities.map((arrowOpacity, index) => (
+                    <Animated.View key={index} style={[styles.arrowWrapper, { opacity: arrowOpacity }]}>
+                        <Entypo name="chevron-down" size={14} color="rgba(0,0,0,0.5)" />
+                    </Animated.View>
+                ))}
+            </Pressable>
         </Animated.View>
     );
 }

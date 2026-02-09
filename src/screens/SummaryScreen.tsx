@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import ScreenContainer from '../components/common/ScreenContainer';
 import theme from '../theme';
 import {
@@ -11,10 +11,14 @@ import {
     MonthlySummary,
 } from '../db/database';
 import { useTransactionChange } from '../components/common/TransactionChangeContext';
+import { formatAmount, formatWon } from '../utils/format';
 import ScrollHint from '../components/common/ScrollHint';
 import { useScrollability } from '../hooks/useScrollability';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
 
 export default function SummaryScreen() {
+    const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const { changeTick } = useTransactionChange();
 
     const now = new Date();
@@ -83,28 +87,14 @@ export default function SummaryScreen() {
         const rate = (diff / prev) * 100;
 
         if (diff > 0) {
-            return `지난 달보다 ${diff.toLocaleString()}원 (${rate.toFixed(1)}%) 더 썼어요.`;
+            return `지난 달보다 ${formatWon(diff)} (${rate.toFixed(1)}%) 더 썼어요.`;
         }
         if (diff < 0) {
-            return `지난 달보다 ${Math.abs(diff).toLocaleString()}원 (${Math.abs(rate).toFixed(1)}%) 덜 썼어요.`;
+            return `지난 달보다 ${formatWon(Math.abs(diff))} (${Math.abs(rate).toFixed(1)}%) 덜 썼어요.`;
         }
         return '지난 달과 이번 달 총 지출이 똑같아요.';
     };
 
-    const formatManWon = (amount: number) => {
-        // 음수 처리 + 반올림
-        const man = amount / 10000;
-        if (man === 0) return '0원';
-
-        // 1만 미만이면 그냥 원 단위로
-        if (Math.abs(amount) < 10000) {
-            return `${amount.toLocaleString()}원`;
-        }
-
-        // 정수만 만들 거면 toFixed(0), 소수 한 자리면 toFixed(1)
-        const manRounded = Math.round(man); // 예: 1100000 -> 110
-        return `${manRounded.toLocaleString()}만 원`;
-    };
 
 
     return (
@@ -115,7 +105,12 @@ export default function SummaryScreen() {
                 onScroll={onScroll}
                 scrollEventThrottle={16}
             >
-                <Text style={styles.title}>요약</Text>
+                <View style={styles.headerRow}>
+                    <Text style={styles.title}>요약</Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('BudgetSetting')}>
+                        <Text style={styles.budgetLink}>예산 설정</Text>
+                    </TouchableOpacity>
+                </View>
                 <Text style={styles.subtitle}>이번 달 지출 요약이에요.</Text>
 
                 {/* TODO: 여기 연/월 선택 UI (지금 만든 커스텀 피커 재사용) */}
@@ -124,127 +119,127 @@ export default function SummaryScreen() {
                     <ActivityIndicator />
                 ) : (
                     <>
-                    <View style={styles.card}>
-                        <Text style={styles.cardTitle}>총 지출</Text>
-                        <Text style={styles.cardAmount}>
-                            {(monthlySummary?.totalExpense ?? 0).toLocaleString()}원
-                        </Text>
-                        <Text style={styles.cardSubtitle}>
-                            하루 평균 <Text style={{ fontWeight: 'bold' }}>
-                                {daysInMonth > 0
-                                    ? Math.round((monthlySummary?.totalExpense ?? 0) / today).toLocaleString()
-                                    : 0}
-                            </Text> 원 <Text style={{ fontSize: theme.typography.sizes.xs, color: theme.colors.textMuted }}>({month}/{today} 기준)</Text>
-                        </Text>
-                    </View>
+                        <View style={styles.card}>
+                            <Text style={styles.cardTitle}>총 지출</Text>
+                            <Text style={styles.cardAmount}>
+                                {formatWon(monthlySummary?.totalExpense ?? 0)}
+                            </Text>
+                            <Text style={styles.cardSubtitle}>
+                                하루 평균 <Text style={{ fontWeight: 'bold' }}>
+                                    {daysInMonth > 0
+                                        ? formatWon(Math.round((monthlySummary?.totalExpense ?? 0) / today))
+                                        : '0원'}
+                                </Text> <Text style={{ fontSize: theme.typography.sizes.xs, color: theme.colors.textMuted }}>({month}/{today} 기준)</Text>
+                            </Text>
+                        </View>
 
-                    <View style={styles.card}>
-                        <Text style={styles.cardTitle}>카테고리 TOP 3</Text>
-                        {topCategories.length === 0 ? (
-                            <Text style={styles.emptyText}>내역이 없습니다.</Text>
-                        ) : (
-                            topCategories.map(row => (
-                                <View key={row.mainCategory} style={styles.row}>
-                                    <Text style={styles.rowLabel}>{row.mainCategory}</Text>
-                                    <Text style={styles.rowValue}>
-                                        {row.amount.toLocaleString()}원
+                        <View style={styles.card}>
+                            <Text style={styles.cardTitle}>카테고리 TOP 3</Text>
+                            {topCategories.length === 0 ? (
+                                <Text style={styles.emptyText}>내역이 없습니다.</Text>
+                            ) : (
+                                topCategories.map(row => (
+                                    <View key={row.mainCategory} style={styles.row}>
+                                        <Text style={styles.rowLabel}>{row.mainCategory}</Text>
+                                        <Text style={styles.rowValue}>
+                                            {formatWon(row.amount)}
+                                        </Text>
+                                    </View>
+                                ))
+                            )}
+                        </View>
+
+                        <View style={styles.card}>
+                            <Text style={styles.cardTitle}>가장 많이 쓴 결제 수단 TOP 3</Text>
+                            {topPayment.length === 0 ? (
+                                <Text style={styles.emptyText}>내역이 없습니다.</Text>
+                            ) : (
+                                topPayment?.map(row => (
+                                    <View key={row.paymentMethod} style={styles.row}>
+                                        <Text style={styles.rowLabel}>{row.paymentMethod}</Text>
+                                        <Text style={styles.rowValue}>
+                                            {formatWon(row.amount)}
+                                        </Text>
+                                    </View>
+                                ))
+
+                            )}
+                        </View>
+
+                        <View style={styles.card}>
+                            <Text style={styles.cardTitle}>저번 달과 비교</Text>
+
+                            {/* 헤더 */}
+                            <View style={styles.compareRow}>
+                                <Text style={[styles.compareCellLabel, styles.compareHeaderText]}>항목</Text>
+                                <Text style={[styles.compareCellValue, styles.compareHeaderText]}>이번 달</Text>
+                                <Text style={[styles.compareCellValue, styles.compareHeaderText]}>지난 달</Text>
+                            </View>
+
+                            <View style={styles.compareRow}>
+                                <Text style={styles.compareCellLabel}>총 지출</Text>
+                                <Text style={styles.compareCellValue}>
+                                    {formatAmount(monthlySummary?.totalExpense ?? 0)}
+                                </Text>
+                                <Text style={styles.compareCellValue}>
+                                    {formatAmount(prevMonthlySummary?.totalExpense ?? 0)}
+                                </Text>
+                            </View>
+
+                            <View style={styles.compareRow}>
+                                <Text style={styles.compareCellLabel}>가장 큰 카테고리</Text>
+
+                                <View style={styles.compareCellValueColumn}>
+                                    <Text style={styles.compareCellValueText}>
+                                        {formatAmount(topCategories[0]?.amount ?? 0)}
+                                    </Text>
+                                    <Text style={styles.compareSubText}>
+                                        ({topCategories[0]?.mainCategory ?? '-'})
                                     </Text>
                                 </View>
-                            ))
-                        )}
-                    </View>
-
-                    <View style={styles.card}>
-                        <Text style={styles.cardTitle}>가장 많이 쓴 결제 수단 TOP 3</Text>
-                        {topPayment.length === 0 ? (
-                            <Text style={styles.emptyText}>내역이 없습니다.</Text>
-                        ) : (
-                            topPayment?.map(row => (
-                                <View key={row.paymentMethod} style={styles.row}>
-                                    <Text style={styles.rowLabel}>{row.paymentMethod}</Text>
-                                    <Text style={styles.rowValue}>
-                                        {row.amount.toLocaleString()}원
+                                <View style={styles.compareCellValueColumn}>
+                                    <Text style={styles.compareCellValueText}>
+                                        {formatAmount(prevTopCategory?.amount ?? 0)}
+                                    </Text>
+                                    <Text style={styles.compareSubText}>
+                                        ({prevTopCategory?.mainCategory ?? '-'})
                                     </Text>
                                 </View>
-                            ))
-
-                        )}
-                    </View>
-
-                    <View style={styles.card}>
-                        <Text style={styles.cardTitle}>저번 달과 비교</Text>
-
-                        {/* 헤더 */}
-                        <View style={styles.compareRow}>
-                            <Text style={[styles.compareCellLabel, styles.compareHeaderText]}>항목</Text>
-                            <Text style={[styles.compareCellValue, styles.compareHeaderText]}>이번 달</Text>
-                            <Text style={[styles.compareCellValue, styles.compareHeaderText]}>지난 달</Text>
-                        </View>
-
-                        <View style={styles.compareRow}>
-                            <Text style={styles.compareCellLabel}>총 지출</Text>
-                            <Text style={styles.compareCellValue}>
-                                {formatManWon(monthlySummary?.totalExpense ?? 0)}
-                            </Text>
-                            <Text style={styles.compareCellValue}>
-                                {formatManWon(prevMonthlySummary?.totalExpense ?? 0)}
-                            </Text>
-                        </View>
-
-                        <View style={styles.compareRow}>
-                            <Text style={styles.compareCellLabel}>가장 큰 카테고리</Text>
-
-                            <View style={styles.compareCellValueColumn}>
-                                <Text style={styles.compareCellValueText}>
-                                    {formatManWon(topCategories[0]?.amount ?? 0)}
-                                </Text>
-                                <Text style={styles.compareSubText}>
-                                    ({topCategories[0]?.mainCategory ?? '-'})
-                                </Text>
                             </View>
-                            <View style={styles.compareCellValueColumn}>
-                                <Text style={styles.compareCellValueText}>
-                                    {formatManWon(prevTopCategory?.amount ?? 0)}
-                                </Text>
-                                <Text style={styles.compareSubText}>
-                                    ({prevTopCategory?.mainCategory ?? '-'})
-                                </Text>
+
+                            <View style={[styles.compareRow, !prevMonthlySummary && styles.compareRowLast]}>
+                                <Text style={styles.compareCellLabel}>결제 수단 1위</Text>
+                                <View style={styles.compareCellValueColumn}>
+                                    <Text style={styles.compareCellValueText}>
+                                        {formatAmount(topPayment[0]?.amount ?? 0)}
+                                    </Text>
+                                    <Text style={styles.compareSubText}>
+                                        ({topPayment[0]?.paymentMethod ?? '-'})
+                                    </Text>
+                                </View>
+                                <View style={styles.compareCellValueColumn}>
+                                    <Text style={styles.compareCellValueText}>
+                                        {formatAmount(prevTopPayment?.amount ?? 0)}
+                                    </Text>
+                                    <Text style={styles.compareSubText}>
+                                        ({prevTopPayment?.paymentMethod ?? '-'})
+                                    </Text>
+                                </View>
                             </View>
+
+
+                            {/* 표 행들 */}
+
+                            {prevMonthlySummary && (
+                                <Text style={[styles.diffText, { marginTop: theme.spacing.sm }]}>
+                                    {renderExpenseDiff(
+                                        monthlySummary?.totalExpense ?? 0,
+                                        prevMonthlySummary.totalExpense
+                                    )}
+                                </Text>
+                            )}
+
                         </View>
-
-                        <View style={[styles.compareRow, !prevMonthlySummary && styles.compareRowLast]}>
-                            <Text style={styles.compareCellLabel}>결제 수단 1위</Text>
-                            <View style={styles.compareCellValueColumn}>
-                                <Text style={styles.compareCellValueText}>
-                                    {formatManWon(topPayment[0]?.amount ?? 0)}
-                                </Text>
-                                <Text style={styles.compareSubText}>
-                                    ({topPayment[0]?.paymentMethod ?? '-'})
-                                </Text>
-                            </View>
-                            <View style={styles.compareCellValueColumn}>
-                                <Text style={styles.compareCellValueText}>
-                                    {formatManWon(prevTopPayment?.amount ?? 0)}
-                                </Text>
-                                <Text style={styles.compareSubText}>
-                                    ({prevTopPayment?.paymentMethod ?? '-'})
-                                </Text>
-                            </View>
-                        </View>
-
-
-                        {/* 표 행들 */}
-
-                        {prevMonthlySummary && (
-                            <Text style={[styles.diffText, { marginTop: theme.spacing.sm }]}>
-                                {renderExpenseDiff(
-                                    monthlySummary?.totalExpense ?? 0,
-                                    prevMonthlySummary.totalExpense
-                                )}
-                            </Text>
-                        )}
-
-                    </View>
                     </>
                 )}
             </ScrollView>
@@ -376,6 +371,21 @@ const styles = StyleSheet.create({
     compareInnerAmount: {
         fontSize: theme.typography.sizes.sm,
         color: theme.colors.text,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: theme.spacing.sm,
+    },
+    budgetLink: {
+        fontSize: theme.typography.sizes.md,
+        color: theme.colors.primary,
+        borderWidth: 1,
+        borderColor: theme.colors.primary,
+        borderRadius: 12,
+        padding: theme.spacing.xs,
+        marginLeft: theme.spacing.sm,
     },
 
 

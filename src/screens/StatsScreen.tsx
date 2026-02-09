@@ -27,6 +27,7 @@ import theme from '../theme';
 import MonthYearPicker from '../components/common/MonthYearPicker';
 import ScrollHint from '../components/common/ScrollHint';
 import { useScrollability } from '../hooks/useScrollability';
+import { formatWon } from '../utils/format';
 
 type StatsRange = 'thisMonth' | 'lastMonth' | 'custom';
 
@@ -268,7 +269,7 @@ export default function StatsScreen() {
                             <View style={styles.card}>
                                 <Text style={styles.cardTitle}>총 지출</Text>
                                 <Text style={styles.rowValueBold}>
-                                    {totalExpense.toLocaleString()}원
+                                    {formatWon(totalExpense)}
                                 </Text>
                             </View>
 
@@ -278,7 +279,7 @@ export default function StatsScreen() {
                                     <Text style={styles.cardTitle}>카테고리별 지출</Text>
                                     {totalForPie > 0 && (
                                         <Text style={styles.cardSubtitle}>
-                                            총 {totalForPie.toLocaleString()}원
+                                            총 {formatWon(totalForPie)}
                                         </Text>
                                     )}
                                 </View>
@@ -323,7 +324,7 @@ export default function StatsScreen() {
                                                         </View>
                                                         <View style={{ alignItems: 'flex-end' }}>
                                                             <Text style={styles.rowValue}>
-                                                                {row.amount.toLocaleString()}원
+                                                                {formatWon(row.amount)}
                                                             </Text>
                                                             <Text style={styles.rowPercent}>{percent}%</Text>
                                                         </View>
@@ -344,7 +345,7 @@ export default function StatsScreen() {
                                                     </View>
                                                     <View style={{ alignItems: 'flex-end' }}>
                                                         <Text style={styles.rowValue}>
-                                                            {othersTotal.toLocaleString()}원
+                                                            {formatWon(othersTotal)}
                                                         </Text>
                                                         <Text style={styles.rowPercent}>
                                                             {Math.round((othersTotal / totalForPie) * 100)}%
@@ -366,7 +367,7 @@ export default function StatsScreen() {
                                     <Text style={styles.cardTitle}>결제 수단별 지출</Text>
                                     {paymentTotal > 0 && (
                                         <Text style={styles.cardSubtitle}>
-                                            총 {paymentTotal.toLocaleString()}원
+                                            총 {formatWon(paymentTotal)}
                                         </Text>
                                     )}
                                 </View>
@@ -420,7 +421,7 @@ export default function StatsScreen() {
                                                         </View>
                                                         <View style={{ alignItems: 'flex-end' }}>
                                                             <Text style={styles.rowValue}>
-                                                                {row.amount.toLocaleString()}원
+                                                                {formatWon(row.amount)}
                                                             </Text>
                                                             <Text style={styles.rowPercent}>{percent}%</Text>
                                                         </View>

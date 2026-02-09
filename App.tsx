@@ -16,12 +16,19 @@ import theme from './src/theme';
 import EditTransactionScreen from './src/screens/EditTransactionScreen';
 import SummaryScreen from './src/screens/SummaryScreen';
 import { TransactionChangeProvider } from './src/components/common/TransactionChangeContext';
+import BudgetSettingScreen from './src/screens/BudgetSettingScreen';
+
+import Toast, { BaseToast, BaseToastProps, ErrorToast } from 'react-native-toast-message';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+
+
 // 1) 탭 네비게이터 (하단 탭 3개)
 function MainTabs() {
+
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -60,6 +67,37 @@ function MainTabs() {
     </Tab.Navigator>
   );
 }
+
+const toastConfig = {
+  success: (props: BaseToastProps) => (
+    <BaseToast
+      {...props}
+      style={{ borderLeftColor: '#4CAF50' }}
+      contentContainerStyle={{ paddingHorizontal: 15 }}
+      text1Style={{
+        fontSize: 20,       // 제목 크기
+        fontWeight: 'bold',
+      }}
+      text2Style={{
+        fontSize: 16,       // 설명 크기
+      }}
+    />
+  ),
+  error: (props: BaseToastProps) => (
+    <ErrorToast
+      {...props}
+      style={{ borderWidth: 1, borderColor: '#FF4D4F', borderLeftColor: '#FF4D4F', marginTop: theme.spacing.md }}
+      text1Style={{
+        fontSize: 20,
+        fontWeight: 'bold',
+      }}
+      text2Style={{
+        fontSize: 16,
+        color: '#FF4D4F',
+      }}
+    />
+  ),
+};
 
 // 2) 전체 앱 루트 (Stack + Tabs + 지출 추가 화면)
 export default function App() {
@@ -113,8 +151,19 @@ export default function App() {
               headerShown: false
             }}
           />
+
+          <Stack.Screen
+            name="BudgetSetting"
+            component={BudgetSettingScreen}
+            options={{
+              title: '예산 설정',
+              headerShown: false,   // 기본 헤더 보여줘도 되고 false로 커스텀해도 됨
+            }}
+          />
+
         </Stack.Navigator>
       </NavigationContainer>
+      <Toast config={toastConfig} />
     </TransactionChangeProvider>
 
   );
