@@ -5,26 +5,26 @@ import colors from '../../theme/colors';
 import spacing from '../../theme/spacing';
 
 type ScreenContainerProps = {
-    children: ReactNode;
-    style?: ViewStyle;
+  children: ReactNode;
+  style?: ViewStyle;
 };
 
 export default function ScreenContainer({ children, style }: ScreenContainerProps) {
-    return (
-        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-            <View style={[styles.inner, style]}>{children}</View>
-        </SafeAreaView>
-    );
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <View style={[styles.inner, style]}>{children}</View>
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: colors.background,
-        paddingTop: spacing.md,
-    },
-    inner: {
-        flex: 1,
-        paddingHorizontal: spacing.lg,
-    },
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+    paddingTop: spacing.md,
+  },
+  inner: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+  },
 });

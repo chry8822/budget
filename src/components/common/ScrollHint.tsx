@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Entypo } from '@expo/vector-icons';
 import theme from '../../theme';
 import { ScrollView } from 'react-native';
@@ -11,7 +11,7 @@ type Props = {
     top?: number;
     bottom?: number;
     visible?: boolean;
-    scrollRef?: React.RefObject<ScrollView | null>;
+    scrollRef?: React.RefObject<ScrollView | FlatList | null>;
     scrollAmount?: number;
 };
 
@@ -59,11 +59,14 @@ export default function ScrollHint({ opacity, top, bottom, visible = true, scrol
     const arrowOpacities: AnimatedValue[] = [arrow1Opacity, arrow2Opacity, arrow3Opacity];
 
     const onPress = () => {
-        if (scrollRef?.current) {
-            scrollRef.current.scrollTo({
-                y: scrollAmount ?? 200,       // 현재 위치에서 아래로 이동하려면 추가 처리 필요
-                animated: true,
-            });
+        const ref = scrollRef?.current;
+        if (!ref) return;
+
+        const offset = scrollAmount ?? 200;
+        if (ref instanceof FlatList) {
+            ref.scrollToOffset({ offset, animated: true });
+        } else {
+            (ref as ScrollView).scrollTo({ y: offset, animated: true });
         }
     };
 

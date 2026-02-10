@@ -1,4 +1,7 @@
-// src/screens/EditTransactionScreen.tsx
+/**
+ * 거래 수정 페이지 (지출/수입 수정)
+ * - 기존 거래 데이터를 불러와 TransactionForm을 edit 모드로 렌더링
+ */
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -47,6 +50,7 @@ export default function EditTransactionScreen({ route, navigation }: Props) {
     return (
         <TransactionForm
             mode="edit"
+            type={transaction.type}
             initialTransaction={transaction}
             onSaved={() => {
                 navigation.goBack();

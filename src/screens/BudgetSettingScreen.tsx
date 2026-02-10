@@ -1,3 +1,8 @@
+/**
+ * 예산 설정 페이지
+ * - 월 총 예산 및 카테고리별 예산 설정
+ * - 예산 초과 경고, 진동 피드백
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Animated, TouchableOpacity, Vibration } from 'react-native';
 import ScreenContainer from '../components/common/ScreenContainer';

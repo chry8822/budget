@@ -1,0 +1,251 @@
+/**
+ * 확장형 플로팅 액션 버튼 (FAB)
+ * - + 버튼 클릭 시 위로 미니 버튼들이 펼쳐짐
+ * - 아이콘 + 라벨 원형 버튼 스타일
+ */
+import React, { useCallback, useRef, useState } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import theme from '../../theme';
+import AnimatedButton from './AnimatedButton';
+
+export type FabAction = {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  onPress: () => void;
+};
+
+type Props = {
+  actions: FabAction[];
+  fabOpacity?: Animated.Value;
+  fabTranslateX?: Animated.Value;
+};
+
+export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Props) {
+  const [open, setOpen] = useState(false);
+  const anim = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  // 탭 포커스될 때마다 5초간 좌우 흔들림 애니메이션
+  useFocusEffect(
+    useCallback(() => {
+      shakeAnim.setValue(0);
+      const shake = Animated.loop(
+        Animated.sequence([
+          Animated.timing(shakeAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: -1, duration: 120, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 0, duration: 120, useNativeDriver: true }),
+          Animated.delay(1500),
+        ]),
+      );
+      shake.start();
+
+      const timer = setTimeout(() => {
+        shake.stop();
+        shakeAnim.setValue(0);
+      }, 5000);
+
+      return () => {
+        clearTimeout(timer);
+        shake.stop();
+        shakeAnim.setValue(0);
+      };
+    }, [shakeAnim]),
+  );
+
+  const toggle = () => {
+    // 열릴 때 흔들림 중단
+    shakeAnim.stopAnimation();
+    shakeAnim.setValue(0);
+
+    const toValue = open ? 0 : 1;
+    Animated.parallel([
+      Animated.spring(anim, { toValue, useNativeDriver: true, friction: 6 }),
+      Animated.timing(rotateAnim, { toValue, duration: 200, useNativeDriver: true }),
+    ]).start();
+    setOpen(!open);
+  };
+
+  const close = () => {
+    if (!open) return;
+    Animated.parallel([
+      Animated.spring(anim, { toValue: 0, useNativeDriver: true, friction: 6 }),
+      Animated.timing(rotateAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start();
+    setOpen(false);
+  };
+
+  const containerStyle = [
+    styles.container,
+    fabOpacity != null || fabTranslateX != null
+      ? {
+          opacity: fabOpacity ?? 1,
+          transform: fabTranslateX ? [{ translateX: fabTranslateX }] : [],
+        }
+      : undefined,
+  ];
+
+  return (
+    <>
+      {open && <Pressable style={styles.overlay} onPress={close} />}
+
+      <Animated.View style={containerStyle}>
+        {/* 미니 액션 버튼들 */}
+        {actions.map((action, index) => {
+          const translateY = anim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, -(64 + index * 60)],
+          });
+
+          return (
+            <Animated.View
+              key={action.label}
+              style={[
+                styles.miniRow,
+                {
+                  opacity: anim,
+                  transform: [{ translateY }, { scale: anim }],
+                },
+              ]}
+            >
+              <Animated.Text style={[styles.miniLabel, { opacity: anim }]}>
+                {action.label}
+              </Animated.Text>
+
+              <Pressable
+                style={[styles.miniButton, { backgroundColor: action.color }]}
+                onPress={() => {
+                  close();
+                  action.onPress();
+                }}
+              >
+                <Ionicons name={action.icon} size={22} color={theme.colors.background} />
+              </Pressable>
+            </Animated.View>
+          );
+        })}
+
+        {/* 메인 FAB + "추가" 라벨 */}
+        <View style={styles.fabRow}>
+          <Animated.View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              transform: [
+                {
+                  translateX: shakeAnim.interpolate({
+                    inputRange: [-1, 0, 1],
+                    outputRange: [-4, 0, 4],
+                  }),
+                },
+              ],
+            }}
+          >
+            <Animated.Text
+              style={[
+                styles.miniLabel,
+                {
+                  backgroundColor: theme.colors.primary,
+                  color: theme.colors.surface,
+                  opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+                  transform: [
+                    {
+                      translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              추가
+            </Animated.Text>
+            <AnimatedButton onPress={toggle} style={styles.fab}>
+              <Animated.View
+                style={{
+                  transform: [
+                    {
+                      rotate: rotateAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', '45deg'],
+                      }),
+                    },
+                  ],
+                }}
+              >
+                <Ionicons name="add" size={28} color={theme.colors.text} />
+              </Animated.View>
+            </AnimatedButton>
+          </Animated.View>
+        </View>
+      </Animated.View>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9,
+  },
+  container: {
+    position: 'absolute',
+    right: theme.spacing.lg,
+    bottom: theme.spacing.lg,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  fabRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: theme.colors.textMuted,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  miniRow: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    right: 0,
+  },
+  miniLabel: {
+    marginRight: 12,
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.text,
+    fontWeight: '600',
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+  },
+  miniButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+});

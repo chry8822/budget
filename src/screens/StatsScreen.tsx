@@ -1,4 +1,8 @@
-// src/screens/StatsScreen.tsx
+/**
+ * 통계 페이지 (지출 분석)
+ * - 카테고리별 파이차트, 결제 수단별 비율
+ * - 월별 지출 추이 바 차트
+ */
 import {
     PieChart,
     BarChart,

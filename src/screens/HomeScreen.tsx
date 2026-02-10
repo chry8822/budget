@@ -1,444 +1,245 @@
+/**
+ * 홈 페이지 (메인)
+ * - 캘린더 / 요약 보기 탭 전환
+ * - 지출·수입 추가 버튼
+ */
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Animated } from 'react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ScreenContainer from '../components/common/ScreenContainer';
 import theme from '../theme';
 import {
-    getMonthlySummary,
-    MonthlySummary,
-    getRecentTransactionsOfMonth,
-    Transaction,
-    getTodayExpenseTotal,
-    DailySummaryRow,
-    getDailySummaryOfMonth
+  getMonthlySummary,
+  MonthlySummary,
+  getRecentTransactionsOfMonth,
+  Transaction,
+  getTodayExpenseTotal,
+  DailySummaryRow,
+  getDailySummaryOfMonth,
 } from '../db/database';
 import { useFocusEffect } from '@react-navigation/native';
-import { formatWon } from '../utils/format';
 import { useCallback } from 'react';
 import ScrollHint from '../components/common/ScrollHint';
 import { RootStackParamList } from '../navigation/types';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 import AnimatedButton from '../components/common/AnimatedButton';
 import { useScrollability } from '../hooks/useScrollability';
+import ExpandableFab, { FabAction } from '../components/common/ExpandableFab';
+import SummarySection from './SummarySection';
+import CalendarSection from './CalendarSection';
 
 type Props = NativeStackScreenProps<RootStackParamList>;
+type HomeTab = 'calendar' | 'summary';
 
 export default function HomeScreen({ navigation }: Props) {
-    const { isScrollable, onContentSizeChange, onLayout, scrollHintOpacity, onScroll } = useScrollability(8);
+  const {
+    isScrollable, onContentSizeChange, onLayout,
+    scrollHintOpacity, fabOpacity, fabTranslateX, onScroll,
+  } = useScrollability(8);
 
-    const [{ year, month, remainingDays, todayStr }] = useState(getThisMonthInfo);
-    const [todayExpense, setTodayExpense] = useState(0);
+  const fabActions: FabAction[] = useMemo(() => [
+    {
+      label: '수입',
+      icon: 'trending-up-outline',
+      color: theme.colors.income,
+      onPress: () => navigation.navigate('AddTransaction', { mode: 'income' }),
+    },
+    {
+      label: '지출',
+      icon: 'trending-down-outline',
+      color: theme.colors.primary,
+      onPress: () => navigation.navigate('AddTransaction', { mode: 'expense' }),
+    },
+  ], [navigation]);
 
-    const [summary, setSummary] = useState<MonthlySummary | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [refreshing, setRefreshing] = useState(false);
-    const [recentRows, setRecentRows] = useState<Transaction[]>([]);
-    const [dailySummary, setDailySummary] = useState<DailySummaryRow[]>([]);
-    const [isAtTop, setIsAtTop] = useState(true); // 스크롤 Y가 0 근처인지
-    
-    const scaleAnim = useRef(new Animated.Value(1)).current;
-    const barAnim = useRef(new Animated.Value(0)).current;
-    const scrollViewRef = useRef<ScrollView>(null);
+  const [{ year, month, remainingDays, todayStr }] = useState(getThisMonthInfo);
+  const [todayExpense, setTodayExpense] = useState(0);
+  const [homeTab, setHomeTab] = useState<HomeTab>('calendar');
 
-    const totalExpense = summary?.totalExpense ?? 0;
-    const topCategories = summary?.byCategory.slice(0, 3) ?? [];
+  const [summary, setSummary] = useState<MonthlySummary | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [recentRows, setRecentRows] = useState<Transaction[]>([]);
+  const [dailySummary, setDailySummary] = useState<DailySummaryRow[]>([]);
 
-    const last3 = dailySummary.slice(-3);  // 날짜 ASC라면 뒤에서 3개
-    const max = Math.max(...last3.map(r => r.amount), 1);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const scrollViewRef = useRef<ScrollView>(null);
 
-    useEffect(() => {
-        startBreathingAnimation();
-    }, []);
+  const totalIncome = summary?.totalIncome ?? 0;
+  const totalExpense = summary?.totalExpense ?? 0;
+  const topCategories = summary?.byCategory.slice(0, 3) ?? [];
 
-    useFocusEffect(
-        useCallback(() => {
-            loadSummary();
-        }, [year, month])
-    );
+  const last3 = dailySummary.slice(-3);
+  const max = Math.max(...last3.map((r) => r.expense ?? 0), 1);
 
-    const startBreathingAnimation = () => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(scaleAnim, {
-                    toValue: 1.05,      // 살짝 커짐
-                    duration: 800,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(scaleAnim, {
-                    toValue: 1,         // 다시 원래 크기
-                    duration: 800,
-                    useNativeDriver: true,
-                }),
-            ])
-        ).start();
-    };
+  useEffect(() => {
+    startBreathingAnimation();
+  }, []);
 
-    // 데이터 로드 후 막대 애니메이션 시작
-    useEffect(() => {
-        if (dailySummary.length > 0) {
-            barAnim.setValue(0);
-            Animated.timing(barAnim, {
-                toValue: 1,
-                duration: 600,
-                useNativeDriver: false,
-            }).start();
-        }
-    }, [dailySummary]);
+  useFocusEffect(
+    useCallback(() => {
+      loadSummary();
+    }, [year, month]),
+  );
 
+  const startBreathingAnimation = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.05,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+  };
 
-    const loadSummary = async () => {
-        setLoading(true);
-        try {
-            const data = await getMonthlySummary(year, month);
-            const recents = await getRecentTransactionsOfMonth(year, month, 5);
-            const todayTotal = await getTodayExpenseTotal(todayStr);
-            const dailyRows = await getDailySummaryOfMonth(year, month);
+  const loadSummary = async () => {
+    setLoading(true);
+    try {
+      const data = await getMonthlySummary(year, month);
+      const recents = await getRecentTransactionsOfMonth(year, month, 5);
+      const todayTotal = await getTodayExpenseTotal(todayStr);
+      const dailyRows = await getDailySummaryOfMonth(year, month);
 
-            setSummary(data);
-            setRecentRows(recents);
-            setTodayExpense(todayTotal);
-            setDailySummary(dailyRows);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleRefresh = async () => {
-        setRefreshing(true);
-        await loadSummary();
-        setRefreshing(false);
-    };
-
-
-    function getThisMonthInfo() {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth() + 1;
-        const today = now.getDate();
-
-        const monthStr = month.toString().padStart(2, '0');
-        const dayStr = today.toString().padStart(2, '0');
-        const todayStr = `${year}-${monthStr}-${dayStr}`;
-
-        const firstDay = new Date(year, month - 1, 1);
-        const lastDay = new Date(year, month, 0);
-        const totalDays = lastDay.getDate();
-        const remainingDays = totalDays - today + 1;
-
-        return { year, month, remainingDays, todayStr };
+      setSummary(data);
+      setRecentRows(recents);
+      setTodayExpense(todayTotal);
+      setDailySummary(dailyRows);
+    } finally {
+      setLoading(false);
     }
+  };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadSummary();
+    setRefreshing(false);
+  };
 
-    return (
-        <ScreenContainer>
-            <ScrollView
-                ref={scrollViewRef}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-                }
-                onContentSizeChange={onContentSizeChange}
-                onLayout={onLayout}
-                onScroll={onScroll}
-                scrollEventThrottle={16}
-            >
+  function getThisMonthInfo() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const today = now.getDate();
 
-                <Animated.Text
-                    style={[
-                        styles.refreshHint,
-                        { transform: [{ scale: scaleAnim }] },
-                    ]}
-                >
-                    화면을 아래로 당기면 새로고침 됩니다
-                </Animated.Text>
-                {/* 상단: 이번 달 기본 정보 */}
-                <View style={styles.header}>
-                    <Text style={styles.monthText}>
-                        {year}년 {month}월 가계 요약
-                    </Text>
-                    <Text style={styles.subText}>
-                        <Ionicons name="calendar-number-outline" size={16} color={theme.colors.textMuted} /> 이번 달 남은 일수: <Text style={{ fontWeight: 'bold' }}>{remainingDays}일</Text>
-                    </Text>
-                    <Text style={styles.todayText}>
-                        <Ionicons name="alert-circle-outline" size={16} color={theme.colors.primary} /> 오늘 <Text style={{ color: theme.colors.primary }}>{formatWon(todayExpense)}</Text> 썼어요
-                    </Text>
-                </View>
+    const monthStr = month.toString().padStart(2, '0');
+    const dayStr = today.toString().padStart(2, '0');
+    const todayStr = `${year}-${monthStr}-${dayStr}`;
 
+    const lastDay = new Date(year, month, 0);
+    const totalDays = lastDay.getDate();
+    const remainingDays = totalDays - today + 1;
 
-                {/* 총 지출 박스 */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>이번 달 총 지출</Text>
-                    {loading ? (
-                        <Text style={styles.bodyText}>계산 중...</Text>
-                    ) : (
-                        <Text style={styles.totalAmount}>
-                            {formatWon(totalExpense)}
-                        </Text>
-                    )}
-                    {/* 미니 막대 그래프 */}
-                    {!loading && last3.length > 0 && (
-                        <View style={styles.miniChartContainer}>
-                            <Text style={styles.miniChartTitle}>
-                                <Text >최근 3일 지출</Text><Text style={{ fontSize: theme.typography.sizes.xs, color: theme.colors.textMuted }}> ({month}월)</Text>
-                            </Text>
+    return { year, month, remainingDays, todayStr };
+  }
 
-                            <View style={styles.miniChartBars}>
-                                {last3.map(row => {
-                                    const heightPercent = (row.amount / max) * 100;
-                                    const day = row.date.split('-')[2]; // '03'
-                                    const BAR_CONTAINER_HEIGHT = 40;
-                                    const targetHeight = (heightPercent / 100) * BAR_CONTAINER_HEIGHT;
-                                    const animatedHeight = barAnim.interpolate({
-                                        inputRange: [0, 1],
-                                        outputRange: [0, targetHeight],
-                                    });
+  return (
+    <ScreenContainer>
+      <ScrollView
+        ref={scrollViewRef}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+        onContentSizeChange={onContentSizeChange}
+        onLayout={onLayout}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingBottom: 24 }}
+      >
+        <Animated.Text style={[styles.refreshHint, { transform: [{ scale: scaleAnim }] }]}>
+          화면을 아래로 당기면 새로고침 됩니다
+        </Animated.Text>
 
-                                    return (
-                                        <View key={row.date} style={styles.miniBarWrapper}>
-                                            <Animated.View
-                                                style={[
-                                                    styles.miniBar,
-                                                    { height: animatedHeight },
-                                                ]}
-                                            />
-                                            <Text style={styles.miniBarLabel}>
-                                                <Text style={{ fontWeight: 'bold' }}>{day}일</Text>
-                                                <Text style={{ fontSize: theme.typography.sizes.xs, color: theme.colors.textMuted }}>({formatWon(row.amount)})</Text>
-                                            </Text>
+        <View style={styles.homeTabBar}>
+          <AnimatedButton
+            onPress={() => setHomeTab('calendar')}
+            style={[styles.homeTab, homeTab === 'calendar' && styles.homeTabActive]}
+          >
+            <Text style={[styles.homeTabText, homeTab === 'calendar' && styles.homeTabTextActive]}>
+              캘린더
+            </Text>
+          </AnimatedButton>
 
-                                        </View>
-                                    );
-                                })}
-                            </View>
-                            <Text style={styles.miniBarNotice}>*막대가 높을수록 많이 쓴 날이에요</Text>
-                        </View>
-                    )}
+          <AnimatedButton
+            onPress={() => setHomeTab('summary')}
+            style={[styles.homeTab, homeTab === 'summary' && styles.homeTabActive]}
+          >
+            <Text style={[styles.homeTabText, homeTab === 'summary' && styles.homeTabTextActive]}>
+              요약 보기
+            </Text>
+          </AnimatedButton>
+        </View>
 
-                </View>
+        {homeTab === 'calendar' ? (
+          <CalendarSection
+            year={year}
+            month={month}
+            dailySummary={dailySummary}
+            totalIncome={totalIncome}
+            totalExpense={totalExpense}
+          />
+        ) : (
+          <SummarySection
+            year={year}
+            month={month}
+            remainingDays={remainingDays}
+            todayExpense={todayExpense}
+            totalExpense={totalExpense}
+            loading={loading}
+            last3={last3}
+            max={max}
+            recentRows={recentRows}
+            topCategories={topCategories}
+            dailySummary={dailySummary}
+          />
+        )}
+      </ScrollView>
 
-                <View style={[styles.card, { paddingBottom: theme.spacing.xs }]}>
-                    <Text style={styles.cardTitle}>최근 지출</Text>
+      <ExpandableFab
+        actions={fabActions}
+        fabOpacity={fabOpacity}
+        fabTranslateX={fabTranslateX}
+      />
 
-                    {loading ? (
-                        <Text style={styles.bodyText}>불러오는 중...</Text>
-                    ) : recentRows.length === 0 ? (
-                        <Text style={styles.bodyText}>아직 등록된 지출이 없습니다.</Text>
-                    ) : (
-                        recentRows.map(row => (
-                            <View key={row.id} style={styles.recentRow}>
-                                <View style={styles.recentLeft}>
-                                    <Text style={styles.recentCategory}>{row.mainCategory}</Text>
-                                    {row.memo ? (
-                                        <Text style={styles.recentMemo} numberOfLines={1}>
-                                            {row.memo}
-                                        </Text>
-                                    ) : null}
-                                </View>
-                                <View style={styles.recentRight}>
-                                    <Text style={styles.recentAmount}>
-                                        {formatWon(row.amount)}
-                                    </Text>
-                                    <Text style={styles.recentDate}>{row.date}</Text>
-                                </View>
-                            </View>
-                        ))
-                    )}
-                </View>
-
-
-                {/* 카테고리 Top 3 */}
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>지출이 많은 카테고리 Top 3</Text>
-                    {loading ? (
-                        <Text style={styles.bodyText}>계산 중...</Text>
-                    ) : topCategories.length === 0 ? (
-                        <Text style={styles.bodyText}>아직 이번 달 지출이 없습니다.</Text>
-                    ) : (
-                        topCategories.map(cat => (
-                            <View key={cat.mainCategory} style={styles.categoryRow}>
-                                <Text style={styles.categoryName}>{cat.mainCategory}</Text>
-                                <Text style={styles.categoryAmount}>
-                                    {formatWon(cat.amount)}
-                                </Text>
-                            </View>
-                        ))
-                    )}
-                </View>
-
-            </ScrollView>
-
-            <View style={styles.addButtonWrapper}>
-                <AnimatedButton
-                    onPress={() => navigation.navigate('AddTransaction')}
-                    style={styles.addButton}
-                >
-                    <Text style={styles.addButtonText}>지출 추가하기</Text>
-                </AnimatedButton>
-            </View>
-
-            <ScrollHint
-                scrollRef={scrollViewRef}
-                visible={isScrollable}
-                opacity={scrollHintOpacity}
-            />
-        </ScreenContainer>
-    );
+      <ScrollHint scrollRef={scrollViewRef} visible={isScrollable} opacity={scrollHintOpacity} />
+    </ScreenContainer>
+  );
 }
 
 const styles = StyleSheet.create({
-    header: {
-        marginBottom: theme.spacing.md,
-    },
-    monthText: {
-        ...theme.typography.title,
-    },
-    subText: {
-        ...theme.typography.subtitle,
-    },
-    refreshHint: {
-        ...theme.typography.body,
-        fontSize: theme.typography.sizes.xs,
-        color: theme.colors.textMuted,
-        textAlign: 'center',
-        marginBottom: theme.spacing.lg,
-    },
-    card: {
-        backgroundColor: theme.colors.surface,
-        borderRadius: 12,
-        padding: theme.spacing.md,
-        marginBottom: theme.spacing.md,
-    },
-    cardTitle: {
-        ...theme.typography.subtitle,
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: theme.spacing.sm,
-    },
-    totalAmount: {
-        fontSize: theme.typography.sizes.xxl,
-        fontWeight: 'bold',
-        color: theme.colors.primary,
-    },
-    bodyText: {
-        ...theme.typography.body,
-    },
-    categoryRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        paddingVertical: 4,
-    },
-    categoryName: {
-        ...theme.typography.body,
-    },
-    categoryAmount: {
-        ...theme.typography.body,
-        fontWeight: 'bold',
-    },
-
-    recentRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: theme.spacing.xs,
-        borderTopColor: theme.colors.border,
-        borderTopWidth: 1
-    },
-    recentLeft: {
-        flex: 1,
-        paddingRight: theme.spacing.sm,
-    },
-    recentRight: {
-        alignItems: 'flex-end',
-    },
-    recentCategory: {
-        ...theme.typography.body,
-        fontWeight: 'bold',
-    },
-    recentMemo: {
-        ...theme.typography.body,
-        fontSize: theme.typography.sizes.xs,
-        color: theme.colors.textMuted,
-        marginTop: 2,
-    },
-    recentAmount: {
-        ...theme.typography.body,
-        fontWeight: 'bold',
-    },
-    recentDate: {
-        fontSize: theme.typography.sizes.xs,
-        color: theme.colors.textMuted,
-        marginTop: 2,
-    },
-    addButtonWrapper: {
-        marginTop: theme.spacing.sm,
-        marginBottom: theme.spacing.lg,
-    },
-
-    addButton: {
-        backgroundColor: theme.colors.primary,
-        paddingVertical: theme.spacing.md,
-        borderRadius: 999,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-
-    addButtonText: {
-        fontSize: theme.typography.sizes.md,
-        color: theme.colors.background,
-        fontWeight: 'bold',
-    },
-    todayText: {
-        ...theme.typography.body,
-        marginTop: theme.spacing.xs,
-        color: theme.colors.text,      // 필요하면 primarySoft 같은 색으로 바꿔도 됨
-    },
-    miniChartContainer: {
-        marginTop: theme.spacing.md,
-    },
-
-
-    miniChartTitle: {
-        fontSize: theme.typography.sizes.sm,
-        fontWeight: 'bold',
-        color: theme.colors.text,
-        marginBottom: theme.spacing.xl,
-        paddingBottom: theme.spacing.sm,
-        borderBottomColor: theme.colors.border,
-        borderBottomWidth: 1
-    },
-
-
-    miniChartBars: {
-        height: 40,
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-    },
-
-    miniBarWrapper: {
-        flex: 1,
-        marginHorizontal: 2,
-        justifyContent: 'flex-end',
-    },
-
-    miniBar: {
-        width: '100%',
-        borderRadius: 2,
-        backgroundColor: theme.colors.primary,
-    },
-
-    miniBarLabel: {
-        marginTop: 4,
-        fontSize: theme.typography.sizes.sm,
-        color: theme.colors.textMuted,
-        textAlign: 'center',
-    },
-
-    miniBarNotice: {
-        ...theme.typography.body,
-        fontSize: theme.typography.sizes.xs,
-        color: theme.colors.textMuted,
-        textAlign: 'right',
-        paddingTop: theme.spacing.sm,
-    },
-
+  refreshHint: {
+    ...theme.typography.body,
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.textMuted,
+    textAlign: 'center',
+    marginBottom: theme.spacing.lg,
+  },
+  homeTabBar: {
+    flexDirection: 'row',
+    marginBottom: theme.spacing.md,
+    borderRadius: 999,
+    backgroundColor: theme.colors.surface,
+    padding: 2,
+  },
+  homeTab: {
+    flex: 1,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  homeTabActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  homeTabText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.textMuted,
+  },
+  homeTabTextActive: {
+    color: theme.colors.background,
+    fontWeight: 'bold',
+  },
 });
-`   `

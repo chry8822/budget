@@ -105,8 +105,9 @@ export async function getAllTransactions(): Promise<Transaction[]> {
   }
 }
 
-/** 월별 지출 요약 타입 */
+/** 월별 요약 타입 */
 export type MonthlySummary = {
+  totalIncome: number;
   totalExpense: number;
   byCategory: { mainCategory: string; amount: number }[];
 };
@@ -122,6 +123,18 @@ export async function getMonthlySummary(year: number, month: number): Promise<Mo
   const prefix = `${year}-${monthStr}`; // 예: 2026-02
 
   try {
+    // 총 수입
+    const incomeRows = await db.getAllAsync<{ total: number }>(
+      `
+        SELECT SUM(amount) as total
+        FROM transactions
+        WHERE type = 'income'
+          AND date LIKE ?;
+        `,
+      [`${prefix}%`],
+    );
+    const totalIncome = incomeRows[0]?.total ?? 0;
+
     // 총 지출
     const totalRows = await db.getAllAsync<{ total: number }>(
       `
@@ -132,7 +145,6 @@ export async function getMonthlySummary(year: number, month: number): Promise<Mo
         `,
       [`${prefix}%`],
     );
-
     const totalExpense = totalRows[0]?.total ?? 0;
 
     // 카테고리별 합계
@@ -149,6 +161,7 @@ export async function getMonthlySummary(year: number, month: number): Promise<Mo
     );
 
     return {
+      totalIncome,
       totalExpense,
       byCategory: categoryRows,
     };
@@ -409,7 +422,8 @@ export async function getTodayExpenseTotal(dateString: string): Promise<number> 
 
 export type DailySummaryRow = {
   date: string; // '2026-02-03'
-  amount: number;
+  income: number; // 그날 수입 합계
+  expense: number; // 그날 지출 합계;
 };
 
 /**
@@ -428,10 +442,12 @@ export async function getDailySummaryOfMonth(
   try {
     const rows = await db.getAllAsync<DailySummaryRow>(
       `
-      SELECT date, SUM(amount) AS amount
+      SELECT
+        date,
+        SUM(CASE WHEN type = 'income'  THEN amount ELSE 0 END) AS income,
+        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expense
       FROM transactions
-      WHERE type = 'expense'
-        AND date LIKE ?
+      WHERE date LIKE ?
       GROUP BY date
       ORDER BY date ASC;
       `,
@@ -545,4 +561,35 @@ export async function deleteBudget(
     console.error('deleteBudget 에러', error);
     throw error;
   }
+}
+
+export async function getTransactionsByDate(date: string): Promise<Transaction[]> {
+  const rows = await db.getAllAsync<Transaction>(
+    `
+    SELECT id, date, amount, mainCategory, memo, createdAt
+    FROM transactions
+    WHERE date = ?
+    ORDER BY createdAt DESC
+    `,
+    [date],
+  );
+
+  return rows;
+}
+
+export async function getMonthlyIncomeTotal(year: number, month: number): Promise<number> {
+  const monthStr = month.toString().padStart(2, '0');
+  const prefix = `${year}-${monthStr}`;
+
+  const rows = await db.getAllAsync<{ total: number }>(
+    `
+    SELECT SUM(amount) as total
+    FROM transactions
+    WHERE type = 'income'
+      AND date LIKE ?;
+    `,
+    [`${prefix}%`],
+  );
+
+  return rows[0]?.total ?? 0;
 }
