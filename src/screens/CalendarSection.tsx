@@ -10,6 +10,7 @@ import theme from '../theme';
 import { DailySummaryRow, Transaction, getTransactionsByDate } from '../db/database';
 import { formatWon } from '../utils/format';
 import { DayProps } from 'react-native-calendars/src/calendar/day';
+import { Ionicons } from '@expo/vector-icons';
 
 LocaleConfig.locales['ko'] = {
   monthNames: [
@@ -185,18 +186,28 @@ export default function CalendarSection({
 
       <View style={styles.calendarCard}>
         <Calendar
+          hideExtraDays
+          enableSwipeMonths
           initialDate={initialMonth}
           monthFormat={'yyyy년 M월'}
           onDayPress={(day: DayData) => setSelectedDate(day.dateString)}
           markingType="custom"
           markedDates={markedDates}
+          // @ts-ignore
+          renderArrow={(direction: string) => (
+            <Ionicons
+              name={direction === 'left' ? 'chevron-back' : 'chevron-forward'}
+              size={18}
+              color={theme.colors.text}
+            />
+          )}
           theme={{
             calendarBackground: theme.colors.surface,
             textSectionTitleColor: theme.colors.textMuted,
             todayTextColor: theme.colors.primary,
             dayTextColor: theme.colors.text,
             textDisabledColor: theme.colors.textMuted,
-            arrowColor: theme.colors.text,
+            arrowColor: theme.colors.textMuted,
             monthTextColor: theme.colors.text,
             textMonthFontSize: 18,
             textMonthFontWeight: 'bold',

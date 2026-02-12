@@ -5,7 +5,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { RootStackParamList } from './src/navigation/types'
+import { RootStackParamList } from './src/navigation/types';
 
 import HomeScreen from './src/screens/HomeScreen';
 import TransactionsScreen from './src/screens/TransactionsScreen';
@@ -19,16 +19,13 @@ import { TransactionChangeProvider } from './src/components/common/TransactionCh
 import BudgetSettingScreen from './src/screens/BudgetSettingScreen';
 
 import Toast, { BaseToast, BaseToastProps, ErrorToast } from 'react-native-toast-message';
+import HapticWrapper from './src/components/common/HapticWrapper';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-
-
 // 1) 탭 네비게이터 (하단 탭 3개)
 function MainTabs() {
-
-
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -38,6 +35,16 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: theme.colors.tabBarBackground ?? '#FFFFFF',
         },
+        tabBarButton: (props) => (
+          <HapticWrapper
+            {...props}
+            onPress={props.onPress as () => void}
+            style={props.style}
+            disabled={props.disabled ?? false}
+          >
+            {props.children as React.ReactNode}
+          </HapticWrapper>
+        ),
         tabBarIcon: ({ color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap = 'home-outline';
 
@@ -75,18 +82,23 @@ const toastConfig = {
       style={{ borderLeftColor: '#4CAF50' }}
       contentContainerStyle={{ paddingHorizontal: 15 }}
       text1Style={{
-        fontSize: 20,       // 제목 크기
+        fontSize: 20, // 제목 크기
         fontWeight: 'bold',
       }}
       text2Style={{
-        fontSize: 16,       // 설명 크기
+        fontSize: 16, // 설명 크기
       }}
     />
   ),
   error: (props: BaseToastProps) => (
     <ErrorToast
       {...props}
-      style={{ borderWidth: 1, borderColor: '#FF4D4F', borderLeftColor: '#FF4D4F', marginTop: theme.spacing.md }}
+      style={{
+        borderWidth: 1,
+        borderColor: '#FF4D4F',
+        borderLeftColor: '#FF4D4F',
+        marginTop: theme.spacing.md,
+      }}
       text1Style={{
         fontSize: 20,
         fontWeight: 'bold',
@@ -106,7 +118,7 @@ export default function App() {
   useEffect(() => {
     initDatabase()
       .then(() => setIsDbReady(true))
-      .catch(err => {
+      .catch((err) => {
         console.error('DB 초기화 실패', err);
         setIsDbReady(true);
       });
@@ -126,11 +138,7 @@ export default function App() {
       <NavigationContainer>
         <Stack.Navigator>
           {/* 하단 탭 3개가 들어있는 메인 화면 */}
-          <Stack.Screen
-            name="MainTabs"
-            component={MainTabs}
-            options={{ headerShown: false }}
-          />
+          <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
 
           {/* 지출 추가 화면 (상단 헤더 + 뒤로가기 버튼 자동 생성) */}
           <Stack.Screen
@@ -139,7 +147,7 @@ export default function App() {
             options={{
               title: '지출 추가',
               headerBackTitle: '뒤로',
-              headerShown: false
+              headerShown: false,
             }}
           />
           <Stack.Screen
@@ -148,7 +156,7 @@ export default function App() {
             options={{
               title: '지출 수정',
               headerBackTitle: '뒤로',
-              headerShown: false
+              headerShown: false,
             }}
           />
 
@@ -157,14 +165,12 @@ export default function App() {
             component={BudgetSettingScreen}
             options={{
               title: '예산 설정',
-              headerShown: false,   // 기본 헤더 보여줘도 되고 false로 커스텀해도 됨
+              headerShown: false, // 기본 헤더 보여줘도 되고 false로 커스텀해도 됨
             }}
           />
-
         </Stack.Navigator>
       </NavigationContainer>
       <Toast config={toastConfig} />
     </TransactionChangeProvider>
-
   );
 }

@@ -112,10 +112,6 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
                 },
               ]}
             >
-              <Animated.Text style={[styles.miniLabel, { opacity: anim }]}>
-                {action.label}
-              </Animated.Text>
-
               <Pressable
                 style={[styles.miniButton, { backgroundColor: action.color }]}
                 onPress={() => {
@@ -123,7 +119,7 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
                   action.onPress();
                 }}
               >
-                <Ionicons name={action.icon} size={22} color={theme.colors.background} />
+                <Text style={styles.miniButtonText}>{action.label}</Text>
               </Pressable>
             </Animated.View>
           );
@@ -145,39 +141,41 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
               ],
             }}
           >
-            <Animated.Text
-              style={[
-                styles.miniLabel,
-                {
-                  backgroundColor: theme.colors.primary,
-                  color: theme.colors.surface,
-                  opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
-                  transform: [
-                    {
-                      translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              추가
-            </Animated.Text>
-            <AnimatedButton onPress={toggle} style={styles.fab}>
-              <Animated.View
-                style={{
-                  transform: [
-                    {
-                      rotate: rotateAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: ['0deg', '45deg'],
-                      }),
-                    },
-                  ],
-                }}
+            <Pressable onPress={toggle} style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Animated.Text
+                style={[
+                  styles.miniLabel,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    color: theme.colors.surface,
+                    opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+                    transform: [
+                      {
+                        translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }),
+                      },
+                    ],
+                  },
+                ]}
               >
-                <Ionicons name="add" size={28} color={theme.colors.text} />
+                추가
+              </Animated.Text>
+              <Animated.View style={styles.fab}>
+                <Animated.View
+                  style={{
+                    transform: [
+                      {
+                        rotate: rotateAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0deg', '45deg'],
+                        }),
+                      },
+                    ],
+                  }}
+                >
+                  <Ionicons name="add" size={28} color={theme.colors.text} />
+                </Animated.View>
               </Animated.View>
-            </AnimatedButton>
+            </Pressable>
           </Animated.View>
         </View>
       </Animated.View>
@@ -236,6 +234,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 2,
   },
+
   miniButton: {
     width: 46,
     height: 46,
@@ -247,5 +246,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
+  },
+  miniButtonText: {
+    fontSize: theme.typography.sizes.md,
+    color: theme.colors.background,
+    fontWeight: '600',
   },
 });
