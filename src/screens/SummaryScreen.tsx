@@ -1,4 +1,9 @@
-// src/screens/SummaryScreen.tsx
+/**
+ * 요약 페이지 (월간 비교 요약)
+ * - 수입/지출/잔액 요약, 예산 대비 지출
+ * - 이번 달 vs 지난 달 비교, TOP 3 카테고리
+ * - 월 네비게이션, 예산 설정 바로가기
+ */
 
 import React, { useEffect, useRef, useState } from 'react';
 import {

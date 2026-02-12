@@ -1,4 +1,9 @@
-// TransactionChangeContext.tsx
+/**
+ * 거래 변경 감지 Context
+ * - 거래 추가/수정/삭제 시 changeTick 증가
+ * - 구독 중인 화면들이 자동으로 데이터 리로드
+ */
+
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 type TransactionChangeContextType = {

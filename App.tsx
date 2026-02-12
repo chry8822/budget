@@ -1,6 +1,10 @@
 // App.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
+
+// 앱 로딩 완료 전까지 스플래시 유지
+SplashScreen.preventAutoHideAsync();
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -17,6 +21,7 @@ import EditTransactionScreen from './src/screens/EditTransactionScreen';
 import SummaryScreen from './src/screens/SummaryScreen';
 import { TransactionChangeProvider } from './src/components/common/TransactionChangeContext';
 import BudgetSettingScreen from './src/screens/BudgetSettingScreen';
+import ErrorBoundary from './src/components/common/ErrorBoundary';
 
 import Toast, { BaseToast, BaseToastProps, ErrorToast } from 'react-native-toast-message';
 import HapticWrapper from './src/components/common/HapticWrapper';
@@ -114,63 +119,78 @@ const toastConfig = {
 // 2) 전체 앱 루트 (Stack + Tabs + 지출 추가 화면)
 export default function App() {
   const [isDbReady, setIsDbReady] = useState(false);
+  const [dbError, setDbError] = useState(false);
 
   useEffect(() => {
     initDatabase()
       .then(() => setIsDbReady(true))
       .catch((err) => {
         console.error('DB 초기화 실패', err);
-        setIsDbReady(true);
+        setDbError(true);
+      })
+      .finally(() => {
+        SplashScreen.hideAsync();
       });
   }, []);
 
-  if (!isDbReady) {
+  // DB 초기화 실패 화면
+  if (dbError) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" />
-        <Text>데이터베이스 준비 중...</Text>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+        <Ionicons name="alert-circle-outline" size={64} color={theme.colors.primary} />
+        <Text style={{ fontSize: 18, fontWeight: 'bold', marginTop: 16, color: theme.colors.text }}>
+          데이터베이스 오류
+        </Text>
+        <Text style={{ fontSize: 14, color: theme.colors.textMuted, textAlign: 'center', marginTop: 8 }}>
+          앱을 시작할 수 없습니다.{'\n'}앱을 종료 후 다시 실행해 주세요.
+        </Text>
       </View>
     );
   }
 
+  if (!isDbReady) {
+    return null; // 스플래시 화면이 보이는 동안
+  }
+
   return (
-    <TransactionChangeProvider>
-      <NavigationContainer>
-        <Stack.Navigator>
-          {/* 하단 탭 3개가 들어있는 메인 화면 */}
-          <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
+    <ErrorBoundary>
+      <TransactionChangeProvider>
+        <NavigationContainer>
+          <Stack.Navigator>
+            {/* 하단 탭 3개가 들어있는 메인 화면 */}
+            <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
 
-          {/* 지출 추가 화면 (상단 헤더 + 뒤로가기 버튼 자동 생성) */}
-          <Stack.Screen
-            name="AddTransaction"
-            component={AddTransactionScreen}
-            options={{
-              title: '지출 추가',
-              headerBackTitle: '뒤로',
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="EditTransaction"
-            component={EditTransactionScreen}
-            options={{
-              title: '지출 수정',
-              headerBackTitle: '뒤로',
-              headerShown: false,
-            }}
-          />
-
-          <Stack.Screen
-            name="BudgetSetting"
-            component={BudgetSettingScreen}
-            options={{
-              title: '예산 설정',
-              headerShown: false, // 기본 헤더 보여줘도 되고 false로 커스텀해도 됨
-            }}
-          />
-        </Stack.Navigator>
-      </NavigationContainer>
-      <Toast config={toastConfig} />
-    </TransactionChangeProvider>
+            {/* 지출 추가 화면 */}
+            <Stack.Screen
+              name="AddTransaction"
+              component={AddTransactionScreen}
+              options={{
+                title: '지출 추가',
+                headerBackTitle: '뒤로',
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen
+              name="EditTransaction"
+              component={EditTransactionScreen}
+              options={{
+                title: '지출 수정',
+                headerBackTitle: '뒤로',
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen
+              name="BudgetSetting"
+              component={BudgetSettingScreen}
+              options={{
+                title: '예산 설정',
+                headerShown: false,
+              }}
+            />
+          </Stack.Navigator>
+        </NavigationContainer>
+        <Toast config={toastConfig} />
+      </TransactionChangeProvider>
+    </ErrorBoundary>
   );
 }

@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "BudgetBook",
-    "slug": "BudgetBook",
+    "name": "한눈쏙 가계부",
+    "slug": "hanunssok-budget",
     "version": "1.0.0",
-    "description": "A mobile app for managing your family's budget",
+    "description": "한눈에 쏙 들어오는 가계부 - 수입/지출 기록, 예산 관리, 월별 통계",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -11,19 +11,20 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FAFAFA"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.chrys.hanunssok"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#FAFAFA"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.BudgetBook"
+      "package": "com.chrys.hanunssok"
     },
     "web": {
       "favicon": "./assets/favicon.png"

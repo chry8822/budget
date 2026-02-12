@@ -1,4 +1,9 @@
-// MonthPickerBottomSheet.tsx
+/**
+ * 월 선택 바텀시트 컴포넌트
+ * - 요약 페이지에서 연/월을 선택하는 모달
+ * - 슬라이드 업 애니메이션, 배경 딤 처리
+ */
+
 import React, { useEffect, useRef, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Animated, Easing } from 'react-native';
 import theme from '../../theme';

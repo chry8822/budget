@@ -1,3 +1,9 @@
+/**
+ * 애니메이션 버튼 컴포넌트
+ * - 누를 때 scale + opacity 피드백 애니메이션
+ * - 모든 버튼에 재사용 가능한 래퍼
+ */
+
 import React, { useRef } from 'react';
 import { Animated, Pressable, StyleProp, ViewStyle } from 'react-native';
 

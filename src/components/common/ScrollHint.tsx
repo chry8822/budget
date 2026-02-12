@@ -1,3 +1,10 @@
+/**
+ * 스크롤 힌트 컴포넌트
+ * - 마우스 스크롤 모양 아이콘 + 아래 화살표 애니메이션
+ * - 스크롤 가능 여부에 따라 표시/숨김
+ * - ScrollView, FlatList 모두 지원
+ */
+
 import React, { useEffect, useRef } from 'react';
 import { Animated, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Entypo } from '@expo/vector-icons';

@@ -1,4 +1,10 @@
-// useScrollability.ts
+/**
+ * 스크롤 감지 커스텀 훅
+ * - 콘텐츠 스크롤 가능 여부 판단
+ * - 스크롤 힌트 opacity 제어
+ * - FAB 숨김/표시 애니메이션 (하단 도달 시 슬라이드 아웃)
+ */
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated } from 'react-native';
 

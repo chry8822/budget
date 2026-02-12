@@ -1,4 +1,10 @@
-// src/components/transactions/TransactionForm.tsx
+/**
+ * 거래 입력/수정 폼 컴포넌트
+ * - 지출/수입 금액, 카테고리, 결제수단, 메모 입력
+ * - 카테고리 동적 추가/삭제
+ * - 생성(create) / 수정(edit) 모드 지원
+ */
+
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Modal,

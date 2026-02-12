@@ -1,3 +1,9 @@
+/**
+ * 월/연도 선택 피커 컴포넌트
+ * - 연도 좌우 네비게이션 + 월 그리드 선택
+ * - 기간 필터에서 커스텀 월 선택 시 사용
+ */
+
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import theme from '../../theme';

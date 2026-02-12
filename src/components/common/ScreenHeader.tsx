@@ -1,3 +1,9 @@
+/**
+ * 커스텀 헤더 컴포넌트
+ * - 뒤로가기 버튼 + 중앙 타이틀
+ * - Stack 네비게이션 하위 페이지에서 사용
+ */
+
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
