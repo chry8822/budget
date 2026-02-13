@@ -26,30 +26,46 @@ import { useScrollability } from '../hooks/useScrollability';
 import ExpandableFab, { FabAction } from '../components/common/ExpandableFab';
 import SummarySection from './SummarySection';
 import CalendarSection from './CalendarSection';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import OnboardingModal, { ONBOARDING_KEY } from '../components/common/OnboardingModal';
 
 type Props = NativeStackScreenProps<RootStackParamList>;
 type HomeTab = 'calendar' | 'summary';
 
 export default function HomeScreen({ navigation }: Props) {
   const {
-    isScrollable, onContentSizeChange, onLayout,
-    scrollHintOpacity, fabOpacity, fabTranslateX, onScroll,
+    isScrollable,
+    onContentSizeChange,
+    onLayout,
+    scrollHintOpacity,
+    fabOpacity,
+    fabTranslateX,
+    onScroll,
   } = useScrollability(8);
 
-  const fabActions: FabAction[] = useMemo(() => [
-    {
-      label: '수입',
-      icon: 'trending-up-outline',
-      color: theme.colors.income,
-      onPress: () => navigation.navigate('AddTransaction', { mode: 'income' }),
-    },
-    {
-      label: '지출',
-      icon: 'trending-down-outline',
-      color: theme.colors.primary,
-      onPress: () => navigation.navigate('AddTransaction', { mode: 'expense' }),
-    },
-  ], [navigation]);
+  const fabActions: FabAction[] = useMemo(
+    () => [
+      {
+        label: '수입',
+        icon: 'trending-up-outline',
+        color: theme.colors.income,
+        onPress: () => navigation.navigate('AddTransaction', { mode: 'income' }),
+      },
+      {
+        label: '지출',
+        icon: 'trending-down-outline',
+        color: theme.colors.primary,
+        onPress: () => navigation.navigate('AddTransaction', { mode: 'expense' }),
+      },
+      {
+        label: `예산\n설정`,
+        icon: 'settings-outline',
+        color: theme.colors.secondary,
+        onPress: () => navigation.navigate('BudgetSetting'),
+      },
+    ],
+    [navigation],
+  );
 
   const [{ year, month, remainingDays, todayStr }] = useState(getThisMonthInfo);
   const [todayExpense, setTodayExpense] = useState(0);
@@ -63,6 +79,7 @@ export default function HomeScreen({ navigation }: Props) {
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const scrollViewRef = useRef<ScrollView>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const totalIncome = summary?.totalIncome ?? 0;
   const totalExpense = summary?.totalExpense ?? 0;
@@ -73,7 +90,15 @@ export default function HomeScreen({ navigation }: Props) {
 
   useEffect(() => {
     startBreathingAnimation();
+    checkOnboarding();
   }, []);
+
+  const checkOnboarding = async () => {
+    const hasShown = await AsyncStorage.getItem(ONBOARDING_KEY);
+    if (!hasShown) {
+      setShowOnboarding(true);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -198,13 +223,30 @@ export default function HomeScreen({ navigation }: Props) {
         )}
       </ScrollView>
 
-      <ExpandableFab
-        actions={fabActions}
-        fabOpacity={fabOpacity}
-        fabTranslateX={fabTranslateX}
-      />
+      <ExpandableFab actions={fabActions} fabOpacity={fabOpacity} fabTranslateX={fabTranslateX} />
 
       <ScrollHint scrollRef={scrollViewRef} visible={isScrollable} opacity={scrollHintOpacity} />
+
+      <OnboardingModal
+        visible={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onSlideAction={(index) => {
+          switch (index) {
+            case 0: // 바로 등록하기 → 지출 추가
+              navigation.navigate('AddTransaction', { mode: 'expense' });
+              break;
+            case 1: // 캘린더 확인하기 → 캘린더 탭으로 전환
+              setHomeTab('calendar');
+              break;
+            case 2: // 통계 보러가기 → 통계 탭
+              navigation.navigate('MainTabs', { screen: 'Stats' } as any);
+              break;
+            case 3: // 예산 설정하기 → 예산 설정 화면
+              navigation.navigate('BudgetSetting');
+              break;
+          }
+        }}
+      />
     </ScreenContainer>
   );
 }
