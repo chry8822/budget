@@ -26,8 +26,13 @@ type SummaryRange = 'thisMonth' | 'lastMonth' | 'all' | 'custom';
 export default function TransactionsScreen() {
   const { notifyChanged } = useTransactionChange();
   const {
-    isScrollable, onContentSizeChange, onLayout,
-    scrollHintOpacity, fabOpacity, fabTranslateX, onScroll,
+    isScrollable,
+    onContentSizeChange,
+    onLayout,
+    scrollHintOpacity,
+    fabOpacity,
+    fabTranslateX,
+    onScroll,
   } = useScrollability(8);
   const flatListRef = useRef<FlatList<Transaction>>(null);
 
@@ -47,20 +52,23 @@ export default function TransactionsScreen() {
   const [showForm, setShowForm] = useState(false);
   const navigation = useNavigation<Navigation>();
 
-  const fabActions: FabAction[] = useMemo(() => [
-    {
-      label: '수입',
-      icon: 'trending-up-outline',
-      color: theme.colors.income,
-      onPress: () => navigation.navigate('AddTransaction', { mode: 'income' }),
-    },
-    {
-      label: '지출',
-      icon: 'trending-down-outline',
-      color: theme.colors.primary,
-      onPress: () => navigation.navigate('AddTransaction', { mode: 'expense' }),
-    },
-  ], [navigation]);
+  const fabActions: FabAction[] = useMemo(
+    () => [
+      {
+        label: '수입',
+        icon: 'trending-up-outline',
+        color: theme.colors.income,
+        onPress: () => navigation.navigate('AddTransaction', { mode: 'income' }),
+      },
+      {
+        label: '지출',
+        icon: 'trending-down-outline',
+        color: theme.colors.primary,
+        onPress: () => navigation.navigate('AddTransaction', { mode: 'expense' }),
+      },
+    ],
+    [navigation],
+  );
 
   const loadTransactions = async () => {
     setLoading(true);
@@ -258,7 +266,8 @@ export default function TransactionsScreen() {
           <Text>불러오는 중...</Text>
         ) : transactions.length === 0 ? (
           <Text style={styles.emptyText}>
-            아직 기록된 내역이 없습니다. 아래 + 버튼으로 첫 지출을 추가해 보세요.
+            아직 기록된 내역이 없습니다.{'\n'}
+            아래 + 버튼으로 첫 지출을 추가해 보세요.
           </Text>
         ) : (
           <>
@@ -317,11 +326,7 @@ export default function TransactionsScreen() {
           </>
         )}
 
-        <ExpandableFab
-          actions={fabActions}
-          fabOpacity={fabOpacity}
-          fabTranslateX={fabTranslateX}
-        />
+        <ExpandableFab actions={fabActions} fabOpacity={fabOpacity} fabTranslateX={fabTranslateX} />
       </ScreenContainer>
 
       <MonthYearPicker
@@ -338,8 +343,10 @@ export default function TransactionsScreen() {
 
 const styles = StyleSheet.create({
   emptyText: {
-    fontSize: theme.typography.body.fontSize,
+    fontSize: theme.typography.sizes.lg,
     color: theme.colors.textMuted,
+    textAlign: 'center',
+    marginTop: theme.spacing.md,
   },
   itemRow: {
     flexDirection: 'row',

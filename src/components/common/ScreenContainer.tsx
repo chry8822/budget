@@ -13,11 +13,16 @@ import spacing from '../../theme/spacing';
 type ScreenContainerProps = {
   children: ReactNode;
   style?: ViewStyle;
+  /** 하단 Safe Area 적용 여부 (기본: false, Stack 화면에서 true 사용) */
+  safeBottom?: boolean;
 };
 
-export default function ScreenContainer({ children, style }: ScreenContainerProps) {
+export default function ScreenContainer({ children, style, safeBottom = false }: ScreenContainerProps) {
+  const edges: ('top' | 'left' | 'right' | 'bottom')[] = ['top', 'left', 'right'];
+  if (safeBottom) edges.push('bottom');
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safeArea} edges={edges}>
       <View style={[styles.inner, style]}>{children}</View>
     </SafeAreaView>
   );

@@ -6,6 +6,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import theme from '../../theme';
 import AnimatedButton from './AnimatedButton';
@@ -24,6 +25,7 @@ type Props = {
 };
 
 export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Props) {
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const anim = useRef(new Animated.Value(0)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -81,6 +83,7 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
 
   const containerStyle = [
     styles.container,
+    { bottom: theme.spacing.lg + insets.bottom },
     fabOpacity != null || fabTranslateX != null
       ? {
           opacity: fabOpacity ?? 1,
@@ -115,8 +118,8 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
               <Pressable
                 style={[styles.miniButton, { backgroundColor: action.color }]}
                 onPress={() => {
-                  close();
                   action.onPress();
+                  close();
                 }}
               >
                 <Text style={styles.miniButtonText}>{action.label}</Text>
@@ -191,7 +194,6 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     right: theme.spacing.lg,
-    bottom: theme.spacing.lg,
     alignItems: 'center',
     zIndex: 10,
   },
@@ -217,6 +219,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     right: 0,
+    zIndex: 11,
   },
   miniLabel: {
     marginRight: 12,

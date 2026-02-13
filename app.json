@@ -22,15 +22,19 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FAFAFA"
       },
-      "edgeToEdgeEnabled": true,
+      "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false,
       "package": "com.chrys.hanunssok"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-sqlite"
-    ]
+    "plugins": ["expo-sqlite"],
+    "extra": {
+      "eas": {
+        "projectId": "948cafce-86a3-44c4-89e0-7e7134b51cb4"
+      }
+    },
+    "owner": "goggg8822"
   }
 }

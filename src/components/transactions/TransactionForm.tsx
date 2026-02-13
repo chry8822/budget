@@ -306,7 +306,7 @@ export default function TransactionForm({
   };
 
   return (
-    <ScreenContainer style={styles.container}>
+    <ScreenContainer style={styles.container} safeBottom>
       <KeyboardAwareScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
