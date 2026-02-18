@@ -16,7 +16,7 @@ import {
   DailySummaryRow,
   getDailySummaryOfMonth,
 } from '../db/database';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useCallback } from 'react';
 import ScrollHint from '../components/common/ScrollHint';
 import { RootStackParamList } from '../navigation/types';
@@ -46,16 +46,16 @@ export default function HomeScreen({ navigation }: Props) {
   const fabActions: FabAction[] = useMemo(
     () => [
       {
-        label: '수입',
-        icon: 'trending-up-outline',
-        color: theme.colors.income,
-        onPress: () => navigation.navigate('AddTransaction', { mode: 'income' }),
-      },
-      {
         label: '지출',
         icon: 'trending-down-outline',
         color: theme.colors.primary,
         onPress: () => navigation.navigate('AddTransaction', { mode: 'expense' }),
+      },
+      {
+        label: '수입',
+        icon: 'trending-up-outline',
+        color: theme.colors.income,
+        onPress: () => navigation.navigate('AddTransaction', { mode: 'income' }),
       },
       {
         label: `예산\n설정`,
@@ -70,6 +70,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [{ year, month, remainingDays, todayStr }] = useState(getThisMonthInfo);
   const [todayExpense, setTodayExpense] = useState(0);
   const [homeTab, setHomeTab] = useState<HomeTab>('calendar');
+  const isFocused = useIsFocused();
 
   const [summary, setSummary] = useState<MonthlySummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -85,13 +86,26 @@ export default function HomeScreen({ navigation }: Props) {
   const totalExpense = summary?.totalExpense ?? 0;
   const topCategories = summary?.byCategory.slice(0, 3) ?? [];
 
-  const last3 = dailySummary.slice(-3);
+  const last3 = useMemo(() => {
+    const withExpense = dailySummary.filter((r) => (r.expense ?? 0) > 0);
+    return withExpense.slice(-3);
+  }, [dailySummary]);
   const max = Math.max(...last3.map((r) => r.expense ?? 0), 1);
 
   useEffect(() => {
     startBreathingAnimation();
     checkOnboarding();
   }, []);
+
+  // 하단 탭에서 홈을 다시 누르면 내부 탭 전환 (캘린더 ↔ 요약 보기)
+  useEffect(() => {
+    const unsub = (navigation as any).addListener?.('tabPress', () => {
+      if (isFocused) {
+        setHomeTab((prev) => (prev === 'calendar' ? 'summary' : 'calendar'));
+      }
+    });
+    return () => unsub?.();
+  }, [navigation, isFocused]);
 
   const checkOnboarding = async () => {
     const hasShown = await AsyncStorage.getItem(ONBOARDING_KEY);
@@ -205,6 +219,7 @@ export default function HomeScreen({ navigation }: Props) {
             dailySummary={dailySummary}
             totalIncome={totalIncome}
             totalExpense={totalExpense}
+            navigation={navigation}
           />
         ) : (
           <SummarySection
@@ -242,7 +257,7 @@ export default function HomeScreen({ navigation }: Props) {
               navigation.navigate('MainTabs', { screen: 'Stats' } as any);
               break;
             case 3: // 예산 설정하기 → 예산 설정 화면
-              navigation.navigate('BudgetSetting');
+              navigation.navigate('BudgetSetting', { year, month });
               break;
           }
         }}

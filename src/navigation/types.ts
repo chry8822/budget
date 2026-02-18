@@ -1,6 +1,6 @@
 export type RootStackParamList = {
   MainTabs: undefined;
-  AddTransaction: { mode: 'expense' | 'income' };
+  AddTransaction: { mode: 'expense' | 'income'; initialDate?: string };
   EditTransaction: { id: number };
-  BudgetSetting: undefined;
+  BudgetSetting: { year?: number; month?: number };
 };

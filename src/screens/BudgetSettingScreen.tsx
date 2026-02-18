@@ -18,17 +18,21 @@ import ScreenContainer from '../components/common/ScreenContainer';
 import ScreenHeader from '../components/common/ScreenHeader';
 import theme from '../theme';
 import { deleteBudget, getBudgetsOfMonth, upsertBudget } from '../db/database';
-import { MAIN_CATEGORIES } from '../types/transaction';
+import { EXPENSE_MAIN_CATEGORIES, MAIN_CATEGORIES } from '../types/transaction';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { formatWon } from '../utils/format';
 
 import Toast from 'react-native-toast-message';
 import { Alert } from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/types';
 
-export default function BudgetSettingScreen() {
+type Props = NativeStackScreenProps<RootStackParamList, 'BudgetSetting'>;
+
+export default function BudgetSettingScreen({ route }: Props) {
   const now = new Date();
-  const [year] = useState(now.getFullYear());
-  const [month] = useState(now.getMonth() + 1);
+  const year = route.params?.year ?? now.getFullYear();
+  const month = route.params?.month ?? now.getMonth() + 1;
 
   const [loading, setLoading] = useState(false);
   const [totalBudget, setTotalBudget] = useState<string>(''); // 문자열로 관리
@@ -65,7 +69,18 @@ export default function BudgetSettingScreen() {
   const loadBudgets = async () => {
     setLoading(true);
     try {
-      const rows = await getBudgetsOfMonth(year, month);
+      let rows = await getBudgetsOfMonth(year, month);
+      const hasData = rows.length > 0;
+
+      // 해당 월에 저장된 값이 없으면 이전 달 예산을 기본값으로 사용
+      if (!hasData) {
+        const prevMonth = month === 1 ? 12 : month - 1;
+        const prevYear = month === 1 ? year - 1 : year;
+        const prevRows = await getBudgetsOfMonth(prevYear, prevMonth);
+        if (prevRows.length > 0) {
+          rows = prevRows;
+        }
+      }
 
       // 전체 예산
       const total = rows.find((b) => b.mainCategory === null);
@@ -97,6 +112,31 @@ export default function BudgetSettingScreen() {
     }));
   };
 
+  const handleReset = () => {
+    Alert.alert(
+      '예산 초기화',
+      `${year}년 ${month}월 예산을 모두 0으로 초기화합니다. 저장 버튼을 누르면 적용됩니다.`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '초기화',
+          style: 'destructive',
+          onPress: () => {
+            setTotalBudget('');
+            setCategoryBudgets({});
+            Vibration.vibrate();
+            Toast.show({
+              type: 'success',
+              text1: '예산이 초기화되었어요.',
+              text2: '저장 버튼을 눌러 적용하세요.',
+              onPress: () => Toast.hide(),
+            });
+          },
+        },
+      ],
+    );
+  };
+
   const handleSave = async () => {
     // 1) 합계/검증
     const parsedTotal = Number(totalBudget) || 0;
@@ -118,10 +158,12 @@ export default function BudgetSettingScreen() {
     }
 
     try {
-      // 2) 전체 예산 저장
+      // 2) 전체 예산 저장 또는 삭제
       const total = parseInt(totalBudget || '0', 10);
       if (!isNaN(total) && total > 0) {
         await upsertBudget(year, month, null, total);
+      } else {
+        await deleteBudget(year, month, null); // 전체 예산 0이면 DB에서 삭제
       }
 
       // 3) 카테고리별 예산 저장
@@ -137,7 +179,7 @@ export default function BudgetSettingScreen() {
 
       // 4) 저장 후 다시 로드
       await loadBudgets();
-
+      Vibration.vibrate();
       // 5) 성공 토스트
       Toast.show({
         type: 'success',
@@ -161,9 +203,19 @@ export default function BudgetSettingScreen() {
       >
         <Animated.View style={{ flex: 1, transform: [{ translateX: shakeAnim }] }}>
           <ScreenHeader title="예산 설정" />
-          <Text style={styles.subtitle}>
-            {year}년 {month}월 예산을 설정하세요.
-          </Text>
+          <View style={styles.subtitleRow}>
+            <Text style={styles.subtitle}>
+              {year}년 {month}월 예산을 설정하세요.
+            </Text>
+            <TouchableOpacity
+              style={[styles.resetButton, loading && styles.resetButtonDisabled]}
+              activeOpacity={0.8}
+              onPress={handleReset}
+              disabled={loading}
+            >
+              <Text style={styles.resetButtonText}>예산 초기화</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* 전체 예산 카드 */}
           <View style={styles.card}>
@@ -184,7 +236,7 @@ export default function BudgetSettingScreen() {
           {/* 카테고리별 예산 */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>카테고리별 예산</Text>
-            {MAIN_CATEGORIES.map((cat) => (
+            {EXPENSE_MAIN_CATEGORIES.map((cat) => (
               <View key={cat} style={styles.categoryRow}>
                 <Text style={styles.categoryLabel}>{cat}</Text>
                 <View style={styles.categoryInputRow} pointerEvents="box-none">
@@ -248,10 +300,16 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
     color: theme.colors.text,
   },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.md,
+  },
   subtitle: {
+    flex: 1,
     fontSize: theme.typography.sizes.sm,
     color: theme.colors.textMuted,
-    marginBottom: theme.spacing.md,
   },
   card: {
     padding: theme.spacing.md,
@@ -352,5 +410,21 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 13,
     fontWeight: '500',
+  },
+  resetButton: {
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+  },
+  resetButtonDisabled: {
+    opacity: 0.6,
+  },
+  resetButtonText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.textMuted,
   },
 });

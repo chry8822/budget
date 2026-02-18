@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   ScrollView,
   TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import ScreenContainer from '../components/common/ScreenContainer';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,13 +27,15 @@ import {
   MonthlySummary,
   getTotalBudgetOfMonth,
   getMonthlyIncomeTotal,
+  getBudgetsOfMonth,
 } from '../db/database';
+import type { Budget } from '../db/database';
 import { useTransactionChange } from '../components/common/TransactionChangeContext';
 import { formatAmount, formatWon } from '../utils/format';
 import ScrollHint from '../components/common/ScrollHint';
 import { useScrollability } from '../hooks/useScrollability';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import HapticWrapper from '../components/common/HapticWrapper';
 import MonthPickerBottomSheet from '../components/summary/MonthPickerBottomSheet';
 
@@ -53,6 +56,7 @@ function formatYearMonthLabel(y: number, m: number) {
 
 export default function SummaryScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
+  const isFocused = useIsFocused();
   const { changeTick } = useTransactionChange();
 
   const now = new Date();
@@ -73,6 +77,11 @@ export default function SummaryScreen() {
   const [prevTopPayment, setPrevTopPayment] = useState<PaymentSummaryRow | null>(null);
   const [monthPickerVisible, setMonthPickerVisible] = useState(false);
 
+  type SummaryTab = 'summary' | 'budget';
+  const [summaryTab, setSummaryTab] = useState<SummaryTab>('summary');
+  const [budgetRows, setBudgetRows] = useState<Budget[]>([]);
+  const [categoryRows, setCategoryRows] = useState<CategorySummaryRow[]>([]);
+
   const { isScrollable, onContentSizeChange, onLayout, scrollHintOpacity, onScroll } =
     useScrollability(8);
 
@@ -80,37 +89,52 @@ export default function SummaryScreen() {
   const daysInMonth = getDaysInMonth(year, month);
 
   const loadSummary = async (targetYear: number, targetMonth: number) => {
-    // setLoading(true);
     try {
-      const currentMonthly = await getMonthlySummary(targetYear, targetMonth);
-      const currentCats = await getCategorySummary(targetYear, targetMonth);
-      const currentPays = await getPaymentSummary(targetYear, targetMonth);
-      const budgetAmount = await getTotalBudgetOfMonth(targetYear, targetMonth);
-      const incomeTotal = await getMonthlyIncomeTotal(targetYear, targetMonth);
+      const [currentMonthly, currentCats, currentPays, budgetAmount, incomeTotal, budgets] =
+        await Promise.all([
+          getMonthlySummary(targetYear, targetMonth),
+          getCategorySummary(targetYear, targetMonth),
+          getPaymentSummary(targetYear, targetMonth),
+          getTotalBudgetOfMonth(targetYear, targetMonth),
+          getMonthlyIncomeTotal(targetYear, targetMonth),
+          getBudgetsOfMonth(targetYear, targetMonth),
+        ]);
 
       const { year: py, month: pm } = getPrevYearMonth(targetYear, targetMonth);
-      const prevMonthly = await getMonthlySummary(py, pm);
-      const prevCats = await getCategorySummary(py, pm);
-      const prevPays = await getPaymentSummary(py, pm);
+      const [prevMonthly, prevCats, prevPays] = await Promise.all([
+        getMonthlySummary(py, pm),
+        getCategorySummary(py, pm),
+        getPaymentSummary(py, pm),
+      ]);
 
       setMonthlyIncome(incomeTotal);
       setTotalBudget(budgetAmount);
       setMonthlySummary(currentMonthly);
       setTopCategories(currentCats.slice(0, 3));
-      setTopPayment(prevPays.slice(0, 3)); // ← 결제수단은 지금은 안 쓸 거면 나중에 제거
+      setTopPayment(prevPays.slice(0, 3));
+      setCategoryRows(currentCats);
+      setBudgetRows(budgets);
 
       setPrevMonthlySummary(prevMonthly);
       setPrevTopCategory(prevCats[0] ?? null);
       setPrevTopPayment(prevPays[0] ?? null);
-    } finally {
-      // setLoading(false);
-    }
+    } finally {}
   };
 
   // 초기 로드 + 거래 변경 시 다시 로드
   useEffect(() => {
     loadSummary(year, month);
   }, [year, month, changeTick]);
+
+  // 하단 탭에서 요약을 다시 누르면 내부 탭 전환 (요약 ↔ 예산)
+  useEffect(() => {
+    const unsub = (navigation as any).addListener?.('tabPress', () => {
+      if (isFocused) {
+        setSummaryTab((prev) => (prev === 'summary' ? 'budget' : 'summary'));
+      }
+    });
+    return () => unsub?.();
+  }, [navigation, isFocused]);
 
   const handlePrevMonth = () => {
     const { year: ny, month: nm } = getPrevYearMonth(year, month);
@@ -154,7 +178,6 @@ export default function SummaryScreen() {
         >
           {/* 1. 월 헤더 */}
           <View style={styles.headerRow}>
-            {/* 좌측: 월 네비게이션 */}
             <View style={styles.monthNav}>
               <TouchableOpacity
                 onPress={handlePrevMonth}
@@ -179,21 +202,32 @@ export default function SummaryScreen() {
                 <Ionicons name="chevron-forward" size={20} color={theme.colors.text} />
               </TouchableOpacity>
             </View>
-
-            {/* 우측: 예산 설정 버튼 */}
-            <HapticWrapper onPress={() => navigation.navigate('BudgetSetting')}>
-              <View>
-                <Text style={styles.budgetLink}>예산 설정</Text>
-              </View>
-            </HapticWrapper>
           </View>
 
+          {/* 요약 / 예산 탭 */}
+          <View style={styles.tabRow}>
+            <Pressable
+              style={[styles.tab, summaryTab === 'summary' && styles.tabActive]}
+              onPress={() => setSummaryTab('summary')}
+            >
+              <Text style={[styles.tabText, summaryTab === 'summary' && styles.tabTextActive]}>
+                요약
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.tab, summaryTab === 'budget' && styles.tabActive]}
+              onPress={() => setSummaryTab('budget')}
+            >
+              <Text style={[styles.tabText, summaryTab === 'budget' && styles.tabTextActive]}>
+                예산
+              </Text>
+            </Pressable>
+          </View>
+
+          {summaryTab === 'summary' ? (
+            <>
           <Text style={styles.subtitle}>이번 달 전체 흐름과 예산 사용을 확인해 보세요.</Text>
 
-          {/* {loading ? (
-            <ActivityIndicator />
-          ) : (
-            <> */}
           {/* 2-A. 수입 / 지출 / 잔액 */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>이번 달 수입 / 지출</Text>
@@ -217,7 +251,14 @@ export default function SummaryScreen() {
 
           {/* 2-B. 예산 vs 지출 */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>예산 사용 현황</Text>
+            <View style={styles.cardTitleRow}>
+              <Text style={styles.cardTitle}>예산 사용 현황</Text>
+              <HapticWrapper onPress={() => navigation.navigate('BudgetSetting', { year, month })}>
+                <View style={styles.budgetButton}>
+                  <Text style={styles.budgetLink}>예산설정</Text>
+                </View>
+              </HapticWrapper>
+            </View>
             <View style={styles.row}>
               <Text style={styles.rowLabel}>이번 달 예산</Text>
               <Text style={styles.rowValue}>{formatWon(totalBudget ?? 0)}</Text>
@@ -335,8 +376,146 @@ export default function SummaryScreen() {
               </Text>
             )}
           </View>
-          {/* </> */}
-          {/* )} */}
+            </>
+          ) : (
+            /* 예산 탭: 예산 설정한 카테고리의 지출만 반영 */
+            (() => {
+              const totalBudgetRow = budgetRows.find((b) => b.mainCategory == null);
+              const categoryBudgets = budgetRows.filter((b) => b.mainCategory != null);
+              const totalBudget =
+                totalBudgetRow?.amount ?? categoryBudgets.reduce((s, b) => s + b.amount, 0);
+              const totalSpentInBudgetCategories = categoryBudgets.reduce(
+                (sum, b) =>
+                  sum + (categoryRows.find((r) => r.mainCategory === b.mainCategory)?.amount ?? 0),
+                0,
+              );
+              const remainingTotal = totalBudget - totalSpentInBudgetCategories;
+              const totalPercent =
+                totalBudget > 0 ? Math.round((totalSpentInBudgetCategories / totalBudget) * 100) : 0;
+
+              return (
+                <View style={styles.budgetCard}>
+                  <Text style={styles.cardTitle}>예산별 지출</Text>
+                  <Text style={styles.budgetTabSubtitle}>
+                    예산을 설정한 카테고리의 지출만 집계돼요.
+                  </Text>
+
+                  {budgetRows.length === 0 ? (
+                    <View style={styles.remainingBudgetBlock}>
+                      <Text style={styles.emptyText}>
+                        예산을 설정하면 여기서 확인할 수 있어요.
+                      </Text>
+                      <Pressable
+                        onPress={() => navigation.navigate('BudgetSetting', { year, month })}
+                        style={styles.budgetButton}
+                      >
+                        <Text style={styles.budgetLink}>예산설정</Text>
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <>
+                      {totalBudget > 0 ? (
+                        <View style={styles.remainingBudgetBlock}>
+                          <View>
+                            <Text style={styles.remainingBudgetLabel}>남은 예산(월별)</Text>
+                            <Text style={styles.remainingBudgetAmount}>
+                              {formatWon(remainingTotal)}
+                            </Text>
+                          </View>
+                          <Pressable
+                            onPress={() => navigation.navigate('BudgetSetting', { year, month })}
+                            style={styles.budgetButton}
+                          >
+                            <Text style={styles.budgetLink}>예산설정</Text>
+                          </Pressable>
+                        </View>
+                      ) : (
+                        <View style={[styles.remainingBudgetBlock, styles.remainingBudgetBlockCompact]}>
+                          <Pressable
+                            onPress={() => navigation.navigate('BudgetSetting', { year, month })}
+                            style={styles.budgetButton}
+                          >
+                            <Text style={styles.budgetLink}>예산설정</Text>
+                          </Pressable>
+                        </View>
+                      )}
+
+                      {totalBudget > 0 ? (
+                        <View style={styles.monthlyBudgetBlock}>
+                          <Text style={styles.monthlyBudgetTitle}>
+                            예산 (월별) {formatWon(totalBudget)}
+                          </Text>
+                          <View style={styles.progressWrap}>
+                            <View style={styles.progressTrack}>
+                              <View
+                                style={[
+                                  styles.progressFill,
+                                  {
+                                    width: `${Math.min(100, totalPercent)}%`,
+                                    backgroundColor: theme.colors.primary,
+                                  },
+                                ]}
+                              />
+                            </View>
+                          </View>
+                          <View style={styles.budgetMeta}>
+                            <Text style={[styles.budgetMetaText, {color: theme.colors.primary, fontWeight: 'bold'}]}>
+                              {formatWon(totalSpentInBudgetCategories)}
+                            </Text>
+                            <Text style={styles.budgetMetaText}>{formatWon(remainingTotal)}</Text>
+                            <Text style={styles.budgetMetaPercent}>{totalPercent}%</Text>
+                          </View>
+                        </View>
+                      ) : null}
+
+                      {categoryBudgets.map((b) => {
+                        const spent =
+                          categoryRows.find((r) => r.mainCategory === b.mainCategory)?.amount ?? 0;
+                        const remaining = b.amount - spent;
+                        const percent =
+                          b.amount > 0 ? Math.round((spent / b.amount) * 100) : 0;
+                        return (
+                          <View key={b.mainCategory!} style={styles.budgetCategoryBlock}>
+                            <View style={styles.budgetRow}>
+                              <View>
+                                <Text style={styles.budgetCategoryName}>{b.mainCategory}</Text>
+                                <Text style={styles.budgetLabel}>{formatWon(b.amount)}</Text>
+                              </View>
+                            </View>
+                            <View style={styles.progressWrap}>
+                              <View style={styles.progressTrack}>
+                                <View
+                                  style={[
+                                    styles.progressFill,
+                                    {
+                                      width: `${Math.min(100, percent)}%`,
+                                      backgroundColor: theme.colors.primary,
+                                    },
+                                  ]}
+                                />
+                              </View>
+                            </View>
+                            <View style={styles.budgetMeta}>
+                              <Text
+                                style={[
+                                  styles.budgetMetaText,
+                                  { color: theme.colors.primary, fontWeight: 'bold' },
+                                ]}
+                              >
+                                {formatWon(spent)}
+                              </Text>
+                              <Text style={styles.budgetMetaText}>{formatWon(remaining)}</Text>
+                              <Text style={styles.budgetMetaPercent}>{percent}%</Text>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </>
+                  )}
+                </View>
+              );
+            })()
+          )}
         </ScrollView>
         <ScrollHint visible={isScrollable} opacity={scrollHintOpacity} top={40} />
       </ScreenContainer>
@@ -386,14 +565,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: theme.colors.text,
   },
-  budgetLink: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.primary,
+  budgetButton: {
     borderWidth: 1,
     borderColor: theme.colors.primary,
-    borderRadius: 12,
-    padding: theme.spacing.xs,
-    marginLeft: theme.spacing.sm,
+    borderRadius: 8,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  budgetLink: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: '600',
+    color: theme.colors.primary,
   },
   // 아래는 네 기존 스타일 그대로
   card: {
@@ -401,6 +583,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: theme.colors.surface,
     marginBottom: theme.spacing.md,
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
   },
   cardTitle: {
     fontSize: theme.typography.sizes.md,
@@ -492,5 +680,131 @@ const styles = StyleSheet.create({
   warnText: {
     color: theme.colors.primary,
     fontWeight: 'bold',
+  },
+
+  tabRow: {
+    flexDirection: 'row',
+    marginBottom: theme.spacing.md,
+    borderRadius: 999,
+    backgroundColor: theme.colors.surface,
+    padding: 2,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  tabText: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.textMuted,
+  },
+  tabTextActive: {
+    color: theme.colors.background,
+    fontWeight: 'bold',
+  },
+
+  budgetCard: {
+    padding: theme.spacing.md,
+    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    marginBottom: theme.spacing.md,
+  },
+  budgetTabSubtitle: {
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.textMuted,
+    marginBottom: theme.spacing.sm,
+  },
+  remainingBudgetBlock: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+    backgroundColor: theme.colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  remainingBudgetBlockCompact: {
+    marginBottom: theme.spacing.sm,
+  },
+  remainingBudgetLabel: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.textMuted,
+    marginBottom: 2,
+  },
+  remainingBudgetAmount: {
+    fontSize: theme.typography.sizes.xl,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+  },
+  monthlyBudgetBlock: {
+    marginBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.sm,
+    backgroundColor: theme.colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  monthlyBudgetTitle: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
+  },
+  budgetCategoryBlock: {
+    marginTop: theme.spacing.sm,
+    paddingTop: theme.spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.border,
+  },
+  budgetRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
+  },
+  budgetLabel: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text,
+    fontWeight: '600',
+  },
+  budgetCategoryName: {
+    marginBottom: theme.spacing.xs,
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.textMuted,
+  },
+  progressWrap: {
+    marginVertical: theme.spacing.xs,
+  },
+  progressTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.border,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  budgetMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  budgetMetaText: {
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.textMuted,
+  },
+  budgetMetaPercent: {
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.textMuted,
+    fontWeight: '600',
   },
 });

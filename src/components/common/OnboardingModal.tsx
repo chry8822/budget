@@ -120,7 +120,8 @@ export default function OnboardingModal({ visible, onClose, onSlideAction }: Pro
     outputRange: [-6, 0, 6],
   });
 
-  const handleClose = () => {
+  const handleClose = async () => {
+    await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
     onClose();
   };
 
@@ -129,7 +130,8 @@ export default function OnboardingModal({ visible, onClose, onSlideAction }: Pro
     onClose();
   };
 
-  const handleSlideAction = () => {
+  const handleSlideAction = async () => {
+    await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
     onClose();
     onSlideAction?.(currentIndex);
   };

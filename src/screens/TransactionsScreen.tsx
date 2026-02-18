@@ -48,30 +48,28 @@ export default function TransactionsScreen() {
   const prevRangeRef = useRef<SummaryRange>('thisMonth');
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const navigation = useNavigation<Navigation>();
 
   const fabActions: FabAction[] = useMemo(
     () => [
       {
-        label: '수입',
-        icon: 'trending-up-outline',
-        color: theme.colors.income,
-        onPress: () => navigation.navigate('AddTransaction', { mode: 'income' }),
-      },
-      {
         label: '지출',
         icon: 'trending-down-outline',
         color: theme.colors.primary,
         onPress: () => navigation.navigate('AddTransaction', { mode: 'expense' }),
+      },
+      {
+        label: '수입',
+        icon: 'trending-up-outline',
+        color: theme.colors.income,
+        onPress: () => navigation.navigate('AddTransaction', { mode: 'income' }),
       },
     ],
     [navigation],
   );
 
   const loadTransactions = async () => {
-    setLoading(true);
     try {
       const data = await getAllTransactions();
       setTransactions(data);
@@ -79,9 +77,7 @@ export default function TransactionsScreen() {
     } catch (e) {
       console.error(e);
       alert('내역을 불러오는 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
+    } 
   };
 
   useEffect(() => {
@@ -191,6 +187,17 @@ export default function TransactionsScreen() {
     setShowMonthPicker(false);
   };
 
+  const isEmpty = summaryRange === 'all' ? transactions.length === 0 : filteredTransactions.length === 0;
+
+  const getEmptyMessage = (): string => {
+    if (summaryRange === 'all') {
+      return '아직 기록된 내역이 없습니다.\n아래 + 버튼으로 첫 지출을 추가해 보세요.';
+    }
+    if (summaryRange === 'thisMonth') return '이번 달에 기록된 내역이 없습니다.';
+    if (summaryRange === 'lastMonth') return '지난 달에 기록된 내역이 없습니다.';
+    return `${customYear}년 ${customMonth}월에 기록된 내역이 없습니다.`;
+  };
+
   return (
     <>
       <ScreenContainer>
@@ -262,12 +269,9 @@ export default function TransactionsScreen() {
           </Text>
           <Text style={styles.summaryAmount}>{formatWon(getSummaryTotal())}</Text>
         </View>
-        {loading ? (
-          <Text>불러오는 중...</Text>
-        ) : transactions.length === 0 ? (
+        {isEmpty ? (
           <Text style={styles.emptyText}>
-            아직 기록된 내역이 없습니다.{'\n'}
-            아래 + 버튼으로 첫 지출을 추가해 보세요.
+            {getEmptyMessage()}
           </Text>
         ) : (
           <>

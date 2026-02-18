@@ -82,7 +82,7 @@ export default function ScrollHint({ opacity, top, bottom, visible = true, scrol
     return (
 
         <Animated.View
-            pointerEvents="box-none"
+            pointerEvents="none"
             style={[
                 styles.container,
                 {
@@ -114,6 +114,7 @@ const styles = StyleSheet.create({
         right: theme.spacing.lg,
         zIndex: 30,
         alignItems: 'center',
+        width: 56,
     },
     mouseShell: {
         width: 26,

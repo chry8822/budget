@@ -123,19 +123,18 @@ export default function StatsScreen() {
         setYear(y);
         setMonth(m);
 
-        setLoading(true);
         try {
-            const monthly = await getMonthlySummary(y, m);
-            const cats = await getCategorySummary(y, m);
-            const pays = await getPaymentSummary(y, m);
+            const [monthly, cats, pays] = await Promise.all([
+                getMonthlySummary(y, m),
+                getCategorySummary(y, m),
+                getPaymentSummary(y, m),
+            ]);
 
             setTotalExpense(monthly.totalExpense);
             setCategoryRows(cats);
             setPaymentRows(pays);
         } catch (e) {
             console.error(e);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -265,9 +264,7 @@ export default function StatsScreen() {
                         {year}년 {month}월 통계
                     </Text>
 
-                    {loading ? (
-                        <ActivityIndicator />
-                    ) : (
+                
                         <View style={{ gap: 5 }}>
                             {/* 총 지출 카드 */}
                             <View style={styles.card}>
@@ -364,7 +361,6 @@ export default function StatsScreen() {
                                 )}
                             </View>
 
-
                             {/* 결제 수단별 (그래프 자리) */}
                             <View style={styles.card}>
                                 <View style={styles.cardHeaderRow}>
@@ -441,7 +437,6 @@ export default function StatsScreen() {
 
 
                         </View>
-                    )}
                 </ScrollView>
                 <ScrollHint visible={isScrollable} opacity={scrollHintOpacity} />
             </ScreenContainer>
@@ -483,7 +478,7 @@ const styles = StyleSheet.create({
     },
     rangeTabs: {
         flexDirection: 'row',
-        gap: theme.spacing.xs as any,
+        gap: theme.spacing.sm as any,
     },
     rangeTab: {
         paddingHorizontal: theme.spacing.md,
@@ -498,7 +493,7 @@ const styles = StyleSheet.create({
         borderColor: theme.colors.primary,
     },
     rangeTabText: {
-        fontSize: theme.typography.sizes.xs,
+        fontSize: theme.typography.sizes.md,
         color: theme.colors.textMuted,
     },
     rangeTabTextActive: {
@@ -521,7 +516,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: theme.spacing.xs,
+        marginBottom: theme.spacing.md,
     },
     cardTitle: {
         fontSize: theme.typography.sizes.md,

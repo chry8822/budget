@@ -27,11 +27,13 @@ type Props = {
 export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Props) {
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
+  const openRef = useRef(open);
+  openRef.current = open;
   const anim = useRef(new Animated.Value(0)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
-  // 탭 포커스될 때마다 5초간 좌우 흔들림 애니메이션
+  // 탭 포커스될 때마다 5초간 좌우 흔들림 애니메이션 / 탭 이동 시 FAB 펼침 상태 초기화
   useFocusEffect(
     useCallback(() => {
       shakeAnim.setValue(0);
@@ -55,8 +57,14 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
         clearTimeout(timer);
         shake.stop();
         shakeAnim.setValue(0);
+        // 네비 탭으로 다른 화면 이동 시 FAB 펼침 상태 닫기
+        if (openRef.current) {
+          anim.setValue(0);
+          rotateAnim.setValue(0);
+          setOpen(false);
+        }
       };
-    }, [shakeAnim]),
+    }, [shakeAnim, anim, rotateAnim]),
   );
 
   const toggle = () => {
@@ -96,7 +104,7 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
     <>
       {open && <Pressable style={styles.overlay} onPress={close} />}
 
-      <Animated.View style={containerStyle}>
+      <Animated.View style={containerStyle} pointerEvents="box-none">
         {/* 미니 액션 버튼들 */}
         {actions.map((action, index) => {
           const translateY = anim.interpolate({
@@ -194,7 +202,11 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     right: theme.spacing.lg,
-    alignItems: 'center',
+    bottom: 0,
+    width: 140,
+    height: 320,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
     zIndex: 10,
   },
   fabRow: {

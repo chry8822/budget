@@ -10,13 +10,13 @@ import { RootStackParamList } from '../navigation/types';
 type Props = NativeStackScreenProps<RootStackParamList, 'AddTransaction'>;
 
 export default function AddTransactionScreen({ route, navigation }: Props) {
-  const { mode } = route.params; // 'expense' | 'income'
-  const isExpense = mode === 'expense';
+  const { mode, initialDate } = route.params;
 
   return (
     <TransactionForm
       mode="create"
-      type={mode} // ✅ 여기 추가
+      type={mode}
+      initialDate={initialDate}
       onSaved={() => {
         navigation.goBack();
       }}

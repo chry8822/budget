@@ -48,6 +48,7 @@ type TransactionFormMode = 'create' | 'edit';
 type Props = {
   mode: TransactionFormMode;
   initialTransaction?: Transaction; // edit일 때 전달
+  initialDate?: string; // create일 때 기본 날짜 (YYYY-MM-DD), 없으면 오늘
   type: TransactionType;
   onSaved: () => void;
   onCancel: () => void;
@@ -55,6 +56,7 @@ type Props = {
 export default function TransactionForm({
   mode,
   initialTransaction,
+  initialDate,
   onSaved,
   onCancel,
   type,
@@ -85,12 +87,18 @@ export default function TransactionForm({
     if (initialTransaction) {
       return new Date(initialTransaction.date);
     }
+    if (initialDate) {
+      return new Date(initialDate + 'T12:00:00');
+    }
     return new Date();
   });
 
   const [tempDate, setTempDate] = useState<Date>(() => {
     if (initialTransaction) {
       return new Date(initialTransaction.date);
+    }
+    if (initialDate) {
+      return new Date(initialDate + 'T12:00:00');
     }
     return new Date();
   });

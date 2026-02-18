@@ -566,7 +566,7 @@ export async function deleteBudget(
 export async function getTransactionsByDate(date: string): Promise<Transaction[]> {
   const rows = await db.getAllAsync<Transaction>(
     `
-    SELECT id, date, amount, mainCategory, memo, createdAt
+    SELECT id, date, amount, type, mainCategory, memo, createdAt
     FROM transactions
     WHERE date = ?
     ORDER BY createdAt DESC
