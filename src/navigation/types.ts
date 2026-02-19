@@ -3,4 +3,5 @@ export type RootStackParamList = {
   AddTransaction: { mode: 'expense' | 'income'; initialDate?: string };
   EditTransaction: { id: number };
   BudgetSetting: { year?: number; month?: number };
+  Settings: undefined;
 };

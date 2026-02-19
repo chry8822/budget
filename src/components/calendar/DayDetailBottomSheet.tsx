@@ -20,7 +20,7 @@ import {
   PanResponder,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import theme from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
 import { Transaction } from '../../db/database';
 import { formatWon } from '../../utils/format';
 
@@ -49,6 +49,7 @@ export default function DayDetailBottomSheet({
   onAddIncome,
   onTransactionPress,
 }: Props) {
+  const theme = useTheme();
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
   useEffect(() => {
@@ -69,6 +70,124 @@ export default function DayDetailBottomSheet({
       }).start();
     }
   }, [visible, translateY]);
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        backdrop: {
+          flex: 1,
+          justifyContent: 'flex-end',
+          backgroundColor: 'rgba(0,0,0,0.45)',
+        },
+        sheet: {
+          width: '100%',
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          backgroundColor: theme.colors.surface,
+          overflow: 'hidden',
+        },
+        handleArea: {
+          paddingVertical: theme.spacing.sm,
+          paddingHorizontal: theme.spacing.lg,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        handle: {
+          width: 40,
+          height: 4,
+          borderRadius: 2,
+          backgroundColor: theme.colors.border,
+          marginTop: theme.spacing.xs,
+        },
+        title: {
+          fontSize: theme.typography.sizes.lg,
+          fontWeight: 'bold',
+          color: theme.colors.text,
+          textAlign: 'center',
+          marginBottom: theme.spacing.md,
+          marginTop: theme.spacing.md,
+        },
+        loadingWrap: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: 120,
+        },
+        listWrap: {
+          flex: 1,
+          maxHeight: SHEET_HEIGHT - 200,
+        },
+        listContent: {
+          paddingHorizontal: theme.spacing.md,
+          paddingBottom: theme.spacing.lg,
+        },
+        emptyText: {
+          ...theme.typography.body,
+          color: theme.colors.textMuted,
+          textAlign: 'center',
+          marginTop: theme.spacing.lg,
+        },
+        txRow: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingVertical: theme.spacing.sm,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: theme.colors.border,
+        },
+        txLeft: {
+          flex: 1,
+          paddingRight: theme.spacing.sm,
+        },
+        txRight: { alignItems: 'flex-end' },
+        txCategory: {
+          ...theme.typography.body,
+          fontWeight: '600',
+          color: theme.colors.text,
+        },
+        txMemo: {
+          ...theme.typography.body,
+          fontSize: theme.typography.sizes.xs,
+          color: theme.colors.textMuted,
+          marginTop: 2,
+        },
+        txAmount: {
+          ...theme.typography.body,
+          fontWeight: 'bold',
+        },
+        txTime: {
+          fontSize: theme.typography.sizes.xs,
+          color: theme.colors.textMuted,
+          marginTop: 2,
+        },
+        addRow: {
+          flexDirection: 'row',
+          gap: theme.spacing.md,
+          paddingHorizontal: theme.spacing.md,
+          paddingVertical: theme.spacing.md,
+          paddingBottom: theme.spacing.lg + 16,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: theme.colors.border,
+          backgroundColor: theme.colors.surface,
+        },
+        addButton: {
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          paddingVertical: theme.spacing.md,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+        },
+        addButtonText: {
+          fontSize: theme.typography.sizes.md,
+          fontWeight: 'bold',
+        },
+      }),
+    [theme],
+  );
 
   const panResponder = useMemo(
     () =>
@@ -137,6 +256,7 @@ export default function DayDetailBottomSheet({
           {loading ? (
             <View style={styles.loadingWrap}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
+
             </View>
           ) : (
             <ScrollView
@@ -191,7 +311,7 @@ export default function DayDetailBottomSheet({
               onPress={onAddIncome}
               activeOpacity={0.8}
             >
-              <Text style={[styles.addButtonText, { color: theme.colors.income }]}>수입</Text>
+              <Text style={[styles.addButtonText, { color: theme.colors.income ?? '#1e88e5' }]}>수입</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.addButton]}
@@ -207,118 +327,3 @@ export default function DayDetailBottomSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-  },
-  sheet: {
-    width: '100%',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    backgroundColor: theme.colors.background,
-    overflow: 'hidden',
-  },
-  handleArea: {
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: theme.colors.border,
-    marginTop :   theme.spacing.xs,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    textAlign: 'center',
-    marginBottom: theme.spacing.md,
-    marginTop: theme.spacing.md
-  },
-  loadingWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: 120,
-  },
-  listWrap: {
-    flex: 1,
-    maxHeight: SHEET_HEIGHT - 200,
-  },
-  listContent: {
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.lg,
-  },
-  emptyText: {
-    ...theme.typography.body,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-    marginTop: theme.spacing.lg,
-  },
-  txRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
-  },
-  txLeft: {
-    flex: 1,
-    paddingRight: theme.spacing.sm,
-  },
-  txRight: {
-    alignItems: 'flex-end',
-  },
-  txCategory: {
-    ...theme.typography.body,
-    fontWeight: '600',
-    color: theme.colors.text,
-  },
-  txMemo: {
-    ...theme.typography.body,
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.textMuted,
-    marginTop: 2,
-  },
-  txAmount: {
-    ...theme.typography.body,
-    fontWeight: 'bold',
-  },
-  txTime: {
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.textMuted,
-    marginTop: 2,
-  },
-  addRow: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    paddingBottom: theme.spacing.lg + 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-  },
-  addButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: theme.spacing.md,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  addButtonText: {
-    fontSize: theme.typography.sizes.md,
-    fontWeight: 'bold',
-  },
-});

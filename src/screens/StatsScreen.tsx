@@ -8,7 +8,7 @@ import {
     BarChart,
 } from 'react-native-chart-kit';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Dimensions, ActivityIndicator } from 'react-native';
 
 import {
@@ -27,7 +27,7 @@ import {
     CategorySummaryRow,
     PaymentSummaryRow,
 } from '../db/database';
-import theme from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 import MonthYearPicker from '../components/common/MonthYearPicker';
 import ScrollHint from '../components/common/ScrollHint';
 import { useScrollability } from '../hooks/useScrollability';
@@ -36,7 +36,6 @@ import { formatWon } from '../utils/format';
 type StatsRange = 'thisMonth' | 'lastMonth' | 'custom';
 
 const screenWidth = Dimensions.get('window').width;
-const chartWidth = screenWidth - theme.spacing.md * 2;
 
 const pieColors = [
     '#87C2CA', // 민트
@@ -59,6 +58,8 @@ const barColors = [
 const topN = 5;
 
 export default function StatsScreen() {
+    const theme = useTheme();
+    const chartWidth = screenWidth - theme.spacing.md * 2;
     const now = new Date();
 
     const [range, setRange] = useState<StatsRange>('thisMonth');
@@ -75,6 +76,135 @@ export default function StatsScreen() {
 
     const [loading, setLoading] = useState(false);
     const { isScrollable, onContentSizeChange, onLayout, scrollHintOpacity, onScroll } = useScrollability(8);
+
+    const styles = useMemo(
+        () =>
+            StyleSheet.create({
+                container: {
+                    paddingTop: theme.spacing.sm,
+                    paddingBottom: theme.spacing.sm,
+                },
+                title: {
+                    fontSize: theme.typography.title.fontSize,
+                    fontWeight: 'bold',
+                    marginBottom: theme.spacing.sm,
+                    color: theme.colors.text,
+                },
+                subtitle: {
+                    fontSize: theme.typography.body.fontSize,
+                    color: theme.colors.textMuted,
+                    marginBottom: theme.spacing.xs,
+                },
+                headerRow: {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: theme.spacing.md,
+                },
+                rangeTabs: {
+                    flexDirection: 'row',
+                    gap: theme.spacing.sm as any,
+                },
+                rangeTab: {
+                    paddingHorizontal: theme.spacing.md,
+                    paddingVertical: theme.spacing.xs,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    backgroundColor: theme.colors.background,
+                },
+                rangeTabActive: {
+                    backgroundColor: theme.colors.primary,
+                    borderColor: theme.colors.primary,
+                },
+                rangeTabText: {
+                    fontSize: theme.typography.sizes.md,
+                    color: theme.colors.textMuted,
+                },
+                rangeTabTextActive: {
+                    color: theme.colors.onPrimary,
+                    fontWeight: 'bold',
+                },
+                currentMonthText: {
+                    fontSize: theme.typography.sizes.xs,
+                    color: theme.colors.textMuted,
+                },
+                card: {
+                    padding: theme.spacing.md,
+                    borderRadius: 12,
+                    backgroundColor: theme.colors.surface,
+                    marginTop: theme.spacing.sm,
+                },
+                cardHeaderRow: {
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: theme.spacing.md,
+                },
+                cardTitle: {
+                    fontSize: theme.typography.sizes.md,
+                    color: theme.colors.text,
+                },
+                cardSubtitle: {
+                    fontSize: theme.typography.sizes.xs,
+                    color: theme.colors.text,
+                },
+                emptyText: {
+                    fontSize: theme.typography.sizes.xs,
+                    color: theme.colors.textMuted,
+                    marginTop: theme.spacing.sm,
+                },
+                statsCardsWrap: { gap: 5 },
+                row: {
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingVertical: 2,
+                },
+                rowRight: { alignItems: 'flex-end' },
+                rowLeft: {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                },
+                rowLabel: {
+                    fontSize: theme.typography.sizes.sm,
+                    color: theme.colors.text,
+                },
+                rowValueBold: {
+                    fontSize: theme.typography.sizes.lg,
+                    color: theme.colors.text,
+                    fontWeight: 'bold',
+                },
+                rowValue: {
+                    fontSize: theme.typography.sizes.sm,
+                    color: theme.colors.text,
+                    fontWeight: 'bold',
+                },
+                rowPercent: {
+                    fontSize: theme.typography.sizes.xs,
+                    color: theme.colors.textMuted,
+                },
+                pieChartWrapper: { marginVertical: theme.spacing.sm },
+                colorDot: { width: 10, height: 10, borderRadius: 5 },
+                colorDotOthers: { backgroundColor: theme.colors.chartOther },
+                barChart: { borderRadius: 12 },
+                barChartMargin: { marginTop: theme.spacing.xs },
+                barChartWrapper: {
+                    marginTop: theme.spacing.xs,
+                    marginBottom: theme.spacing.sm,
+                },
+                pieRow: {
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingVertical: theme.spacing.xs,
+                },
+                pieCol: { flex: 0.45, alignItems: 'center' },
+                legendCol: { flex: 0.55 },
+            }),
+        [theme],
+    );
 
     // 카테고리 데이터 정리
     const totalForPie = categoryRows.reduce(
@@ -94,27 +224,26 @@ export default function StatsScreen() {
         (sum, r) => sum + (r.amount || 0),
         0,
     );
-    const chartConfig = {
-        backgroundGradientFrom: '#ffffff',
-        backgroundGradientTo: '#ffffff',
+    const chartConfig = useMemo(() => ({
+        backgroundGradientFrom: theme.colors.surface,
+        backgroundGradientTo: theme.colors.surface,
         color: (opacity = 1) => `rgba(71, 179, 156, ${opacity})`,
-        labelColor: (opacity = 1) => `rgba(120, 120, 120, ${opacity})`,
+        labelColor: () => theme.colors.text,
         propsForBackgroundLines: {
-            stroke: '#eee',
+            stroke: theme.colors.border,
         },
         formatYLabel: (value: string) => {
-            // value는 "0", "50", "100" 이런 문자열 (만원 단위)
             const n = Math.round(Number(value));
             if (Number.isNaN(n)) return value;
-            return `${n} 만`; // 50만, 100만 처럼 표시
+            return `${n} 만`;
         },
-    };
+    }), [theme]);
 
     const categoryPieData = sortedCategoryRows.map((row, idx) => ({
         name: row.mainCategory,
         amount: row.amount,
         color: pieColors[idx % pieColors.length],
-        legendFontColor: theme.colors.textMuted,
+        legendFontColor: theme.colors.text,
         legendFontSize: 12,
     }));
 
@@ -265,7 +394,7 @@ export default function StatsScreen() {
                     </Text>
 
                 
-                        <View style={{ gap: 5 }}>
+                        <View style={styles.statsCardsWrap}>
                             {/* 총 지출 카드 */}
                             <View style={styles.card}>
                                 <Text style={styles.cardTitle}>총 지출</Text>
@@ -323,7 +452,7 @@ export default function StatsScreen() {
                                                             />
                                                             <Text style={styles.rowLabel}>{row.mainCategory}</Text>
                                                         </View>
-                                                        <View style={{ alignItems: 'flex-end' }}>
+                                                        <View style={styles.rowRight}>
                                                             <Text style={styles.rowValue}>
                                                                 {formatWon(row.amount)}
                                                             </Text>
@@ -339,12 +468,12 @@ export default function StatsScreen() {
                                                         <View
                                                             style={[
                                                                 styles.colorDot,
-                                                                { backgroundColor: '#DDDEDF' },
+                                                                styles.colorDotOthers,
                                                             ]}
                                                         />
                                                         <Text style={styles.rowLabel}>기타</Text>
                                                     </View>
-                                                    <View style={{ alignItems: 'flex-end' }}>
+                                                    <View style={styles.rowRight}>
                                                         <Text style={styles.rowValue}>
                                                             {formatWon(othersTotal)}
                                                         </Text>
@@ -390,18 +519,16 @@ export default function StatsScreen() {
                                                 chartConfig={{
                                                     ...chartConfig,
                                                     color: (opacity = 1) =>
-                                                        `rgba(71, 179, 156, ${opacity})`, // 조금 더 진한 티얼
-                                                    labelColor: (opacity = 1) =>
-                                                        `rgba(80, 80, 80, ${opacity})`,
+                                                        `rgba(71, 179, 156, ${opacity})`,
                                                 }}
-                                                style={{ borderRadius: 12 }}
+                                                style={styles.barChart}
                                                 showValuesOnTopOfBars={false}
                                             />
 
                                         </View>
 
                                         {/* 아래: 실제 정보(색 + 금액 + 퍼센트) */}
-                                        <View style={{ marginTop: theme.spacing.xs }}>
+                                        <View style={styles.barChartMargin}>
                                             {paymentRows.map((row, idx) => {
                                                 const percent =
                                                     totalForPie > 0
@@ -419,7 +546,7 @@ export default function StatsScreen() {
                                                             />
                                                             <Text style={styles.rowLabel}>{row.paymentMethod}</Text>
                                                         </View>
-                                                        <View style={{ alignItems: 'flex-end' }}>
+                                                        <View style={styles.rowRight}>
                                                             <Text style={styles.rowValue}>
                                                                 {formatWon(row.amount)}
                                                             </Text>
@@ -453,141 +580,5 @@ export default function StatsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        paddingTop: theme.spacing.sm,
-        paddingBottom: theme.spacing.sm,
-    },
-    title: {
-        fontSize: theme.typography.title.fontSize,
-        fontWeight: 'bold',
-        marginBottom: theme.spacing.sm,
-        color: theme.colors.text,
-    },
-    subtitle: {
-        fontSize: theme.typography.body.fontSize,
-        color: theme.colors.textMuted,
-        marginBottom: theme.spacing.xs,
-    },
-    // 상단 기간 탭 + 선택 월 표시
-    headerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: theme.spacing.md,
-    },
-    rangeTabs: {
-        flexDirection: 'row',
-        gap: theme.spacing.sm as any,
-    },
-    rangeTab: {
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.xs,
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        backgroundColor: theme.colors.background,
-    },
-    rangeTabActive: {
-        backgroundColor: theme.colors.primary,
-        borderColor: theme.colors.primary,
-    },
-    rangeTabText: {
-        fontSize: theme.typography.sizes.md,
-        color: theme.colors.textMuted,
-    },
-    rangeTabTextActive: {
-        color: theme.colors.background,
-        fontWeight: 'bold',
-    },
-    currentMonthText: {
-        fontSize: theme.typography.sizes.xs,
-        color: theme.colors.textMuted,
-    },
-
-    // 카드 공통
-    card: {
-        padding: theme.spacing.md,
-        borderRadius: 12,
-        backgroundColor: theme.colors.surface,
-        marginTop: theme.spacing.sm,
-    },
-    cardHeaderRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: theme.spacing.md,
-    },
-    cardTitle: {
-        fontSize: theme.typography.sizes.md,
-        color: theme.colors.textMuted,
-    },
-    cardSubtitle: {
-        fontSize: theme.typography.sizes.xs,
-        color: theme.colors.textMuted,
-    },
-    emptyText: {
-        fontSize: theme.typography.sizes.xs,
-        color: theme.colors.textMuted,
-        marginTop: theme.spacing.sm,
-    },
-
-    // 카테고리/결제 리스트 행
-    row: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 2,
-    },
-    rowLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    rowLabel: {
-        fontSize: theme.typography.sizes.sm,
-        color: theme.colors.text,
-    },
-    rowValueBold: {
-        fontSize: theme.typography.sizes.lg,
-        color: theme.colors.text,
-        fontWeight: 'bold',
-    },
-    rowValue: {
-        fontSize: theme.typography.sizes.sm,
-        color: theme.colors.text,
-        fontWeight: 'bold',
-    },
-    rowPercent: {
-        fontSize: theme.typography.sizes.xs,
-        color: theme.colors.textMuted,
-    },
-    pieChartWrapper: {
-        marginVertical: theme.spacing.sm,
-    },
-
-    colorDot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-    },
-    barChartWrapper: {
-        marginTop: theme.spacing.xs,
-        marginBottom: theme.spacing.sm,
-    },
-    pieRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: theme.spacing.xs,   // 여유
-    },
-    pieCol: {
-        flex: 0.45,        // 0.4 → 0.38
-        alignItems: 'center',
-    },
-    legendCol: {
-        flex: 0.55
-    },
-});
 
 

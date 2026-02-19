@@ -5,7 +5,7 @@
  * - 생성(create) / 수정(edit) 모드 지원
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Modal,
   Animated,
@@ -18,7 +18,7 @@ import {
   Platform,
 } from 'react-native';
 import ScreenContainer from '../common/ScreenContainer';
-import theme from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
 import {
   PAYMENT_METHODS,
   MainCategory,
@@ -61,10 +61,11 @@ export default function TransactionForm({
   onCancel,
   type,
 }: Props) {
+  const theme = useTheme();
   const isEdit = mode === 'edit';
   const isExpense = type === 'expense';
 
-  const mainColor = isExpense ? theme.colors.primary : theme.colors.income;
+  const mainColor = isExpense ? theme.colors.primary : (theme.colors.income ?? '#1e88e5');
   const resolvedTitle = isExpense
     ? mode === 'create'
       ? '지출 추가'
@@ -78,6 +79,149 @@ export default function TransactionForm({
   const paymentMethods = isExpense ? EXPENSE_PAYMENT_METHODS : INCOME_PAYMENT_METHODS;
 
   const { notifyChanged } = useTransactionChange();
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          paddingBottom: theme.spacing.sm,
+          paddingTop: theme.spacing.sm,
+        },
+        scrollView: { paddingVertical: theme.spacing.sm },
+        scrollContent: { paddingBottom: theme.spacing.xl },
+        title: {
+          fontSize: theme.typography.title.fontSize,
+          fontWeight: 'bold',
+          marginBottom: theme.spacing.md,
+          color: theme.colors.text,
+        },
+        label: {
+          fontSize: theme.typography.body.fontSize,
+          marginTop: theme.spacing.md,
+          marginBottom: theme.spacing.sm,
+          color: theme.colors.text,
+          fontWeight: 'bold',
+        },
+        input: {
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          borderRadius: 8,
+          paddingHorizontal: theme.spacing.sm,
+          paddingVertical: theme.spacing.sm,
+          fontSize: theme.typography.body.fontSize,
+          color: theme.colors.text,
+          backgroundColor: theme.colors.background,
+        },
+        inputWrapper: { position: 'relative' },
+        inputWithClear: { paddingRight: theme.spacing.lg },
+        clearButton: {
+          position: 'absolute',
+          right: theme.spacing.sm,
+          top: 0,
+          bottom: 0,
+          justifyContent: 'center',
+        },
+        memoInput: { height: 80, textAlignVertical: 'top' },
+        chipContainer: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: theme.spacing.sm as any,
+        },
+        chip: {
+          paddingHorizontal: theme.spacing.sm,
+          paddingVertical: theme.spacing.xs,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          marginRight: theme.spacing.sm,
+          marginBottom: theme.spacing.sm,
+        },
+        chipSelected: {
+          borderColor: 'transparent',
+        },
+        chipText: {
+          fontSize: theme.typography.body.fontSize,
+          color: theme.colors.textMuted,
+        },
+        chipTextSelected: { color: theme.colors.onPrimary },
+        buttonRow: {
+          flexDirection: 'row',
+          justifyContent: 'flex-end',
+          marginTop: theme.spacing.lg,
+          gap: theme.spacing.sm as any,
+        },
+        button: {
+          paddingHorizontal: theme.spacing.lg,
+          paddingVertical: theme.spacing.sm,
+          borderRadius: 8,
+        },
+        cancelButton: { backgroundColor: theme.colors.surface },
+        saveButton: {},
+        cancelButtonText: { color: theme.colors.text },
+        saveButtonText: { color: theme.colors.onPrimary, fontWeight: 'bold' },
+        datePickerContainer: { marginTop: 8 },
+        datePickerButtons: {
+          flexDirection: 'row',
+          justifyContent: 'flex-end',
+          marginTop: 4,
+        },
+        dateButton: {
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 8,
+          marginLeft: theme.spacing.sm,
+        },
+        dateCancelButton: { backgroundColor: theme.colors.surface },
+        dateOkButton: { backgroundColor: theme.colors.primary },
+        dateCancelText: { ...theme.typography.body, color: theme.colors.text },
+        dateOkText: {
+          ...theme.typography.body,
+          color: theme.colors.onPrimary,
+          fontWeight: 'bold',
+        },
+        quickAmountContainer: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          marginTop: theme.spacing.sm,
+          marginBottom: theme.spacing.sm,
+          gap: theme.spacing.md as any,
+        },
+        quickAmountButton: {
+          paddingHorizontal: theme.spacing.sm,
+          paddingVertical: theme.spacing.xs,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          backgroundColor: theme.colors.surface,
+        },
+        quickAmountText: {
+          ...theme.typography.body,
+          fontSize: theme.typography.sizes.xs,
+          color: theme.colors.text,
+        },
+        modalOverlay: {
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          justifyContent: 'center',
+          padding: theme.spacing.lg,
+        },
+        modalCard: {
+          backgroundColor: theme.colors.surface,
+          borderRadius: 12,
+          padding: theme.spacing.lg,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+        },
+        modalTitle: {
+          ...theme.typography.subtitle,
+          fontWeight: 'bold',
+          marginBottom: theme.spacing.sm,
+          color: theme.colors.text,
+        },
+        chipDelete: { position: 'absolute', top: -6, right: -6 },
+      }),
+    [theme],
+  );
 
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -542,171 +686,3 @@ export default function TransactionForm({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    paddingBottom: theme.spacing.sm,
-    paddingTop: theme.spacing.sm,
-  },
-  scrollView: {
-    paddingVertical: theme.spacing.sm,
-  },
-  scrollContent: {
-    paddingBottom: theme.spacing.xl,
-  },
-  title: {
-    fontSize: theme.typography.title.fontSize,
-    fontWeight: 'bold',
-    marginBottom: theme.spacing.md,
-    color: theme.colors.text,
-  },
-  label: {
-    fontSize: theme.typography.body.fontSize,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    color: theme.colors.text,
-    fontWeight: 'bold',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 8,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
-    fontSize: theme.typography.body.fontSize,
-  },
-  inputWrapper: {
-    position: 'relative',
-  },
-  inputWithClear: {
-    paddingRight: theme.spacing.lg,
-  },
-  clearButton: {
-    position: 'absolute',
-    right: theme.spacing.sm,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-  },
-  memoInput: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  chipContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm as any,
-  },
-  chip: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginRight: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
-  },
-  chipSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  chipText: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.textMuted,
-  },
-  chipTextSelected: {
-    color: theme.colors.background,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: theme.spacing.lg,
-    gap: theme.spacing.sm as any,
-  },
-  button: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: 8,
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.surface,
-  },
-  saveButton: {},
-  cancelButtonText: {
-    color: theme.colors.text,
-  },
-  saveButtonText: {
-    color: theme.colors.background,
-    fontWeight: 'bold',
-  },
-  datePickerContainer: {
-    marginTop: 8,
-  },
-  datePickerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 4,
-  },
-  dateButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginLeft: 8,
-  },
-  dateCancelButton: {
-    backgroundColor: theme.colors.surface,
-  },
-  dateOkButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  dateCancelText: {
-    ...theme.typography.body,
-  },
-  dateOkText: {
-    ...theme.typography.body,
-    color: theme.colors.background,
-    fontWeight: 'bold',
-  },
-  quickAmountContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
-    gap: theme.spacing.md as any,
-  },
-  quickAmountButton: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  quickAmountText: {
-    ...theme.typography.body,
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.text,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    padding: theme.spacing.lg,
-  },
-  modalCard: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 12,
-    padding: theme.spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  modalTitle: {
-    ...theme.typography.subtitle,
-    fontWeight: 'bold',
-    marginBottom: theme.spacing.sm,
-  },
-  chipDelete: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-  },
-});

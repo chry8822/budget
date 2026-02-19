@@ -4,10 +4,10 @@
  * - 슬라이드 업 애니메이션, 배경 딤 처리
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Animated, Easing } from 'react-native';
-import theme from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../theme/ThemeContext';
 
 type Props = {
   visible: boolean;
@@ -24,8 +24,103 @@ export default function MonthPickerBottomSheet({
   initialMonth,
   onConfirm,
 }: Props) {
+  const theme = useTheme();
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        backdrop: {
+          flex: 1,
+          justifyContent: 'flex-end',
+          backgroundColor: 'rgba(0,0,0,0.4)',
+        },
+        backdropTouchable: { flex: 1 },
+        sheet: {
+          paddingTop: theme.spacing.lg,
+          paddingBottom: theme.spacing.lg,
+          paddingHorizontal: theme.spacing.lg,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          backgroundColor: theme.colors.surface,
+        },
+        yearRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: theme.spacing.md,
+        },
+        yearButton: {
+          paddingHorizontal: theme.spacing.sm,
+          paddingVertical: theme.spacing.xs,
+        },
+        yearButtonText: {
+          fontSize: theme.typography.sizes.lg,
+          color: theme.colors.text,
+        },
+        yearLabel: {
+          marginHorizontal: theme.spacing.lg,
+          fontSize: theme.typography.sizes.lg,
+          fontWeight: 'bold',
+          color: theme.colors.text,
+        },
+        monthGrid: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          marginBottom: theme.spacing.md,
+        },
+        monthItem: {
+          width: '22%',
+          paddingVertical: theme.spacing.sm,
+          marginBottom: theme.spacing.sm,
+          borderRadius: 12,
+          alignItems: 'center',
+          backgroundColor: theme.colors.background,
+        },
+        monthItemSelected: {
+          backgroundColor: theme.colors.primarySoft ?? theme.colors.primary,
+        },
+        monthText: {
+          fontSize: theme.typography.sizes.sm,
+          color: theme.colors.text,
+        },
+        monthTextSelected: {
+          color: theme.colors.primary,
+          fontWeight: 'bold',
+        },
+        footerRow: {
+          flexDirection: 'row',
+          marginTop: theme.spacing.sm,
+        },
+        footerButton: {
+          flex: 1,
+          paddingVertical: theme.spacing.sm,
+          borderRadius: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        footerCancel: {
+          marginRight: theme.spacing.sm,
+          backgroundColor: theme.colors.background,
+        },
+        footerConfirm: {
+          marginLeft: theme.spacing.sm,
+          backgroundColor: theme.colors.primary,
+        },
+        footerCancelText: {
+          fontSize: theme.typography.sizes.md,
+          color: theme.colors.text,
+        },
+        footerConfirmText: {
+          fontSize: theme.typography.sizes.md,
+          color: theme.colors.onPrimary,
+          fontWeight: 'bold',
+        },
+      }),
+    [theme],
+  );
 
   const translateY = useRef(new Animated.Value(300)).current;
 
@@ -129,94 +224,3 @@ export default function MonthPickerBottomSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.25)',
-  },
-  backdropTouchable: {
-    flex: 1,
-  },
-  sheet: {
-    paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.lg,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    backgroundColor: theme.colors.background,
-  },
-  yearRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center', // 가운데
-    marginBottom: theme.spacing.md,
-  },
-  yearButton: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-  },
-  yearButtonText: {
-    fontSize: theme.typography.sizes.lg,
-    color: theme.colors.text,
-  },
-  yearLabel: {
-    marginHorizontal: theme.spacing.lg,
-    fontSize: theme.typography.sizes.lg,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-  },
-  monthGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.md,
-  },
-  monthItem: {
-    width: '22%',
-    paddingVertical: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
-    borderRadius: 12,
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-  },
-  monthItemSelected: {
-    backgroundColor: theme.colors.primarySoft ?? theme.colors.primary,
-  },
-  monthText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.text,
-  },
-  monthTextSelected: {
-    color: theme.colors.primary,
-    fontWeight: 'bold',
-  },
-  footerRow: {
-    flexDirection: 'row',
-    marginTop: theme.spacing.sm,
-  },
-  footerButton: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footerCancel: {
-    marginRight: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-  },
-  footerConfirm: {
-    marginLeft: theme.spacing.sm,
-    backgroundColor: theme.colors.primary,
-  },
-  footerCancelText: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text,
-  },
-  footerConfirmText: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.background,
-    fontWeight: 'bold',
-  },
-});

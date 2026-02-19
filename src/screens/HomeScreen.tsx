@@ -3,10 +3,10 @@
  * - 캘린더 / 요약 보기 탭 전환
  * - 지출·수입 추가 버튼
  */
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Animated, Image } from 'react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ScreenContainer from '../components/common/ScreenContainer';
-import theme from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 import {
   getMonthlySummary,
   MonthlySummary,
@@ -33,6 +33,7 @@ type Props = NativeStackScreenProps<RootStackParamList>;
 type HomeTab = 'calendar' | 'summary';
 
 export default function HomeScreen({ navigation }: Props) {
+  const theme = useTheme();
   const {
     isScrollable,
     onContentSizeChange,
@@ -61,10 +62,79 @@ export default function HomeScreen({ navigation }: Props) {
         label: `예산\n설정`,
         icon: 'settings-outline',
         color: theme.colors.secondary,
-        onPress: () => navigation.navigate('BudgetSetting'),
+        onPress: () => navigation.navigate('BudgetSetting', {}),
       },
     ],
-    [navigation],
+    [navigation, theme.colors.primary, theme.colors.income, theme.colors.secondary],
+  );
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        header: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: theme.spacing.md,
+          paddingVertical: theme.spacing.sm,
+        },
+        headerIconWrap: {
+          width: 48,
+          height: 48,
+          borderRadius: 14,
+          overflow: 'hidden',
+          backgroundColor: theme.colors.surface,
+          marginRight: theme.spacing.sm,
+        },
+        headerIcon: {
+          width: 72,
+          height: 72,
+          marginLeft: -12,
+          marginTop: -12,
+        },
+        headerTitle: {
+          fontSize: theme.typography.sizes.xl,
+          fontWeight: 'bold',
+          color: theme.colors.text,
+        },
+        headerSubtitle: {
+          fontSize: theme.typography.sizes.xs,
+          color: theme.colors.textMuted,
+          marginTop: 2,
+        },
+        refreshHint: {
+          ...theme.typography.body,
+          fontSize: theme.typography.sizes.xs,
+          color: theme.colors.textMuted,
+          textAlign: 'center',
+          marginBottom: theme.spacing.lg,
+        },
+        homeTabBar: {
+          flexDirection: 'row',
+          marginBottom: theme.spacing.md,
+          borderRadius: 999,
+          backgroundColor: theme.colors.surface,
+          padding: 2,
+        },
+        homeTab: {
+          flex: 1,
+          paddingVertical: theme.spacing.sm,
+          borderRadius: 999,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        homeTabActive: {
+          backgroundColor: theme.colors.primary,
+        },
+        homeTabText: {
+          fontSize: theme.typography.sizes.md,
+          color: theme.colors.textMuted,
+        },
+        homeTabTextActive: {
+          color: theme.colors.onPrimary,
+          fontWeight: 'bold',
+        },
+      }),
+    [theme],
   );
 
   const [{ year, month, remainingDays, todayStr }] = useState(getThisMonthInfo);
@@ -188,9 +258,15 @@ export default function HomeScreen({ navigation }: Props) {
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingBottom: 24 }}
       >
-        <Animated.Text style={[styles.refreshHint, { transform: [{ scale: scaleAnim }] }]}>
-          화면을 아래로 당기면 새로고침 됩니다
-        </Animated.Text>
+        <View style={styles.header}>
+          <View style={styles.headerIconWrap}>
+            <Image source={require('../../assets/icon.png')} style={styles.headerIcon} resizeMode="cover" />
+          </View>
+          <View>
+            <Text style={styles.headerTitle}>한눈쏙 가계부</Text>
+            <Text style={styles.headerSubtitle}>수입·지출을 한눈에</Text>
+          </View>
+        </View>
 
         <View style={styles.homeTabBar}>
           <AnimatedButton
@@ -265,38 +341,3 @@ export default function HomeScreen({ navigation }: Props) {
     </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  refreshHint: {
-    ...theme.typography.body,
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  homeTabBar: {
-    flexDirection: 'row',
-    marginBottom: theme.spacing.md,
-    borderRadius: 999,
-    backgroundColor: theme.colors.surface,
-    padding: 2,
-  },
-  homeTab: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  homeTabActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  homeTabText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textMuted,
-  },
-  homeTabTextActive: {
-    color: theme.colors.background,
-    fontWeight: 'bold',
-  },
-});

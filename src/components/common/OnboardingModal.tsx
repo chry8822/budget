@@ -5,7 +5,7 @@
  * - AsyncStorage로 "다시 안보기" 상태 저장
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import theme from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -73,10 +73,124 @@ type Props = {
 };
 
 export default function OnboardingModal({ visible, onClose, onSlideAction }: Props) {
+  const theme = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
   const swipeHintAnim = useRef(new Animated.Value(0)).current;
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        overlay: {
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 24,
+        },
+        container: {
+          backgroundColor: theme.colors.surface,
+          borderRadius: 20,
+          width: SCREEN_WIDTH - 48,
+          paddingTop: 20,
+          paddingBottom: 20,
+          overflow: 'hidden',
+        },
+        closeButton: {
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          zIndex: 10,
+          padding: 4,
+        },
+        slide: {
+          width: SCREEN_WIDTH - 48,
+          alignItems: 'center',
+          paddingHorizontal: 32,
+          paddingTop: 32,
+          paddingBottom: 12,
+        },
+        iconCircle: {
+          width: 100,
+          height: 100,
+          borderRadius: 50,
+          backgroundColor: theme.colors.background,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 24,
+        },
+        slideTitle: {
+          fontSize: theme.typography.sizes.xl,
+          fontWeight: 'bold',
+          color: theme.colors.text,
+          textAlign: 'center',
+          marginBottom: 12,
+        },
+        slideDescription: {
+          fontSize: theme.typography.sizes.md,
+          color: theme.colors.textMuted,
+          textAlign: 'center',
+          lineHeight: 24,
+        },
+        swipeHint: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginTop: 4,
+          marginBottom: 4,
+        },
+        swipeHintText: {
+          fontSize: theme.typography.sizes.xs,
+          color: theme.colors.textMuted,
+          marginHorizontal: 4,
+        },
+        dotsContainer: {
+          flexDirection: 'row',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginTop: 8,
+          marginBottom: 16,
+        },
+        dot: {
+          height: 8,
+          borderRadius: 4,
+          marginHorizontal: 4,
+        },
+        buttonArea: {
+          alignItems: 'center',
+          paddingHorizontal: 24,
+        },
+        actionButton: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.colors.primary,
+          paddingVertical: 14,
+          paddingHorizontal: 28,
+          borderRadius: 14,
+          width: '100%',
+          marginBottom: 8,
+        },
+        actionButtonIcon: {
+          marginRight: theme.spacing.sm,
+        },
+        actionButtonText: {
+          fontSize: theme.typography.sizes.md,
+          fontWeight: 'bold',
+          color: theme.colors.onPrimary,
+        },
+        skipButton: {
+          paddingVertical: 10,
+          paddingHorizontal: 16,
+        },
+        skipText: {
+          fontSize: theme.typography.sizes.sm,
+          color: theme.colors.textMuted,
+        },
+      }),
+    [theme],
+  );
 
   const isLastSlide = currentIndex === slides.length - 1;
 
@@ -244,8 +358,8 @@ export default function OnboardingModal({ visible, onClose, onSlideAction }: Pro
               <Ionicons
                 name={currentSlide.buttonIcon}
                 size={18}
-                color="#fff"
-                style={{ marginRight: 6 }}
+                color={theme.colors.onPrimary}
+                style={styles.actionButtonIcon}
               />
               <Text style={styles.actionButtonText}>{currentSlide.buttonLabel}</Text>
             </Pressable>
@@ -261,108 +375,3 @@ export default function OnboardingModal({ visible, onClose, onSlideAction }: Pro
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  container: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 20,
-    width: SCREEN_WIDTH - 48,
-    paddingTop: 20,
-    paddingBottom: 20,
-    overflow: 'hidden',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    zIndex: 10,
-    padding: 4,
-  },
-  slide: {
-    width: SCREEN_WIDTH - 48,
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 32,
-    paddingBottom: 12,
-  },
-  iconCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: theme.colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  slideTitle: {
-    fontSize: theme.typography.sizes.xl,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  slideDescription: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  swipeHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  swipeHintText: {
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.textMuted,
-    marginHorizontal: 4,
-  },
-  dotsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  dot: {
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
-  },
-  buttonArea: {
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 14,
-    width: '100%',
-    marginBottom: 8,
-  },
-  actionButtonText: {
-    fontSize: theme.typography.sizes.md,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  skipButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  skipText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textMuted,
-  },
-});

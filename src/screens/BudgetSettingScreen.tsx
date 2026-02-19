@@ -3,7 +3,7 @@
  * - 월 총 예산 및 카테고리별 예산 설정
  * - 예산 초과 경고, 진동 피드백
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import ScreenContainer from '../components/common/ScreenContainer';
 import ScreenHeader from '../components/common/ScreenHeader';
-import theme from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 import { deleteBudget, getBudgetsOfMonth, upsertBudget } from '../db/database';
 import { EXPENSE_MAIN_CATEGORIES, MAIN_CATEGORIES } from '../types/transaction';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -30,6 +30,7 @@ import type { RootStackParamList } from '../navigation/types';
 type Props = NativeStackScreenProps<RootStackParamList, 'BudgetSetting'>;
 
 export default function BudgetSettingScreen({ route }: Props) {
+  const theme = useTheme();
   const now = new Date();
   const year = route.params?.year ?? now.getFullYear();
   const month = route.params?.month ?? now.getMonth() + 1;
@@ -39,6 +40,142 @@ export default function BudgetSettingScreen({ route }: Props) {
   const [categoryBudgets, setCategoryBudgets] = useState<Record<string, string>>({}); // 카테고리별 금액
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        title: {
+          fontSize: theme.typography.title.fontSize,
+          fontWeight: 'bold',
+          marginBottom: theme.spacing.sm,
+          color: theme.colors.text,
+        },
+        subtitleRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: theme.spacing.md,
+        },
+        subtitle: {
+          flex: 1,
+          fontSize: theme.typography.sizes.sm,
+          color: theme.colors.textMuted,
+        },
+        card: {
+          padding: theme.spacing.md,
+          borderRadius: 12,
+          backgroundColor: theme.colors.surface,
+          marginBottom: theme.spacing.md,
+        },
+        cardTitle: {
+          fontSize: theme.typography.sizes.md,
+          fontWeight: 'bold',
+          color: theme.colors.text,
+          marginBottom: theme.spacing.sm,
+        },
+        cardHint: {
+          marginTop: theme.spacing.xs,
+          fontSize: theme.typography.sizes.xs,
+          color: theme.colors.textMuted,
+        },
+        inputRow: { flexDirection: 'row', alignItems: 'center' },
+        input: {
+          flex: 1,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+          paddingVertical: 4,
+          fontSize: theme.typography.sizes.md,
+          color: theme.colors.text,
+        },
+        inputSuffix: {
+          marginLeft: theme.spacing.xs,
+          fontSize: theme.typography.sizes.sm,
+          color: theme.colors.text,
+        },
+        categoryRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: theme.spacing.xs,
+        },
+        categoryLabel: {
+          flex: 1,
+          fontSize: theme.typography.sizes.sm,
+          color: theme.colors.text,
+        },
+        categoryInputRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          minWidth: 120,
+          justifyContent: 'flex-end',
+        },
+        categoryInput: {
+          minWidth: 80,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+          textAlign: 'right',
+          paddingVertical: 2,
+          fontSize: theme.typography.sizes.sm,
+          color: theme.colors.text,
+        },
+        saveButton: {
+          marginTop: theme.spacing.sm,
+          marginBottom: theme.spacing.xl,
+          paddingVertical: theme.spacing.md,
+          borderRadius: 999,
+          backgroundColor: theme.colors.primary,
+          alignItems: 'center',
+        },
+        saveButtonDisabled: { opacity: 0.6 },
+        saveButtonText: {
+          fontSize: theme.typography.sizes.md,
+          fontWeight: 'bold',
+          color: theme.colors.onPrimary,
+        },
+        shakeWrap: { flex: 1 },
+        summaryBox: {
+          marginTop: theme.spacing.md,
+          padding: theme.spacing.sm,
+          borderRadius: 8,
+          backgroundColor: theme.colors.surface,
+        },
+        summaryTitle: {
+          fontSize: theme.typography.sizes.sm,
+          fontWeight: '600',
+          marginBottom: theme.spacing.sm,
+          color: theme.colors.text,
+        },
+        summaryRow: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          marginBottom: theme.spacing.xs,
+        },
+        summaryLabel: {
+          fontSize: theme.typography.sizes.xs,
+          color: theme.colors.textMuted,
+        },
+        summaryValue: {
+          fontSize: theme.typography.sizes.xs,
+          fontWeight: '500',
+          color: theme.colors.text,
+        },
+        resetButton: {
+          paddingVertical: theme.spacing.xs,
+          paddingHorizontal: theme.spacing.sm,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          backgroundColor: theme.colors.surface,
+          alignItems: 'center',
+        },
+        resetButtonDisabled: { opacity: 0.6 },
+        resetButtonText: {
+          fontSize: theme.typography.sizes.sm,
+          color: theme.colors.textMuted,
+        },
+      }),
+    [theme],
+  );
 
   const parsedTotal = Number(totalBudget) || 0;
   const categoriesTotal = Object.values(categoryBudgets).reduce((sum: number, c: string) => {
@@ -201,7 +338,7 @@ export default function BudgetSettingScreen({ route }: Props) {
         enableAutomaticScroll={Platform.OS === 'ios'}
         enableResetScrollToCoords={false}
       >
-        <Animated.View style={{ flex: 1, transform: [{ translateX: shakeAnim }] }}>
+        <Animated.View style={[styles.shakeWrap, { transform: [{ translateX: shakeAnim }] }]}>
           <ScreenHeader title="예산 설정" />
           <View style={styles.subtitleRow}>
             <Text style={styles.subtitle}>
@@ -293,138 +430,3 @@ export default function BudgetSettingScreen({ route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  title: {
-    fontSize: theme.typography.title.fontSize,
-    fontWeight: 'bold',
-    marginBottom: theme.spacing.sm,
-    color: theme.colors.text,
-  },
-  subtitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.md,
-  },
-  subtitle: {
-    flex: 1,
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textMuted,
-  },
-  card: {
-    padding: theme.spacing.md,
-    borderRadius: 12,
-    backgroundColor: theme.colors.surface,
-    marginBottom: theme.spacing.md,
-  },
-  cardTitle: {
-    fontSize: theme.typography.sizes.md,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
-  },
-  cardHint: {
-    marginTop: theme.spacing.xs,
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.textMuted,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  input: {
-    flex: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    paddingVertical: 4,
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.text,
-  },
-  inputSuffix: {
-    marginLeft: 4,
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.text,
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: theme.spacing.xs,
-  },
-  categoryLabel: {
-    flex: 1,
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.text,
-  },
-  categoryInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minWidth: 120,
-    justifyContent: 'flex-end',
-  },
-  categoryInput: {
-    minWidth: 80,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    textAlign: 'right',
-    paddingVertical: 2,
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.text,
-  },
-  saveButton: {
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.xl,
-    paddingVertical: theme.spacing.md,
-    borderRadius: 999,
-    backgroundColor: theme.colors.primary,
-    alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    fontSize: theme.typography.sizes.md,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  summaryBox: {
-    marginTop: 16,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#F5F5F5',
-  },
-  summaryTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  summaryLabel: {
-    fontSize: 13,
-    color: '#666',
-  },
-  summaryValue: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  resetButton: {
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-  },
-  resetButtonDisabled: {
-    opacity: 0.6,
-  },
-  resetButtonText: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textMuted,
-  },
-});

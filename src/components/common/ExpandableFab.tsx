@@ -3,12 +3,12 @@
  * - + 버튼 클릭 시 위로 미니 버튼들이 펼쳐짐
  * - 아이콘 + 라벨 원형 버튼 스타일
  */
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import theme from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
 import AnimatedButton from './AnimatedButton';
 
 export type FabAction = {
@@ -25,6 +25,7 @@ type Props = {
 };
 
 export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Props) {
+  const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const openRef = useRef(open);
@@ -32,6 +33,93 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
   const anim = useRef(new Animated.Value(0)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        overlay: {
+          ...StyleSheet.absoluteFillObject,
+          zIndex: 9,
+        },
+        container: {
+          position: 'absolute',
+          right: theme.spacing.lg,
+          bottom: 0,
+          width: 140,
+          height: 320,
+          alignItems: 'flex-end',
+          justifyContent: 'flex-end',
+          zIndex: 10,
+        },
+        fabRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+        },
+        shakeWrapper: {
+          flexDirection: 'row',
+          alignItems: 'center',
+        },
+        togglePressable: {
+          flexDirection: 'row',
+          alignItems: 'center',
+        },
+        fab: {
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: theme.colors.background,
+          alignItems: 'center',
+          justifyContent: 'center',
+          elevation: 4,
+          shadowColor: theme.colors.textMuted,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.3,
+          shadowRadius: 5,
+        },
+        fabInner: {},
+        miniRow: {
+          position: 'absolute',
+          flexDirection: 'row',
+          alignItems: 'center',
+          right: 0,
+          zIndex: 11,
+        },
+        miniLabel: {
+          marginRight: 12,
+          fontSize: theme.typography.sizes.xs,
+          color: theme.colors.text,
+          fontWeight: '600',
+          backgroundColor: theme.colors.background,
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+          borderRadius: 6,
+          overflow: 'hidden',
+          elevation: 2,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.15,
+          shadowRadius: 2,
+        },
+        miniButton: {
+          width: 46,
+          height: 46,
+          borderRadius: 23,
+          alignItems: 'center',
+          justifyContent: 'center',
+          elevation: 4,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 3,
+        },
+        miniButtonText: {
+          fontSize: theme.typography.sizes.md,
+          color: theme.colors.background,
+          fontWeight: '600',
+        },
+      }),
+    [theme],
+  );
 
   // 탭 포커스될 때마다 5초간 좌우 흔들림 애니메이션 / 탭 이동 시 FAB 펼침 상태 초기화
   useFocusEffect(
@@ -139,20 +227,21 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
         {/* 메인 FAB + "추가" 라벨 */}
         <View style={styles.fabRow}>
           <Animated.View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              transform: [
-                {
-                  translateX: shakeAnim.interpolate({
-                    inputRange: [-1, 0, 1],
-                    outputRange: [-4, 0, 4],
-                  }),
-                },
-              ],
-            }}
+            style={[
+              styles.shakeWrapper,
+              {
+                transform: [
+                  {
+                    translateX: shakeAnim.interpolate({
+                      inputRange: [-1, 0, 1],
+                      outputRange: [-4, 0, 4],
+                    }),
+                  },
+                ],
+              },
+            ]}
           >
-            <Pressable onPress={toggle} style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Pressable onPress={toggle} style={styles.togglePressable}>
               <Animated.Text
                 style={[
                   styles.miniLabel,
@@ -172,16 +261,19 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
               </Animated.Text>
               <Animated.View style={styles.fab}>
                 <Animated.View
-                  style={{
-                    transform: [
-                      {
-                        rotate: rotateAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: ['0deg', '45deg'],
-                        }),
-                      },
-                    ],
-                  }}
+                  style={[
+                    styles.fabInner,
+                    {
+                      transform: [
+                        {
+                          rotate: rotateAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0deg', '45deg'],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
                 >
                   <Ionicons name="add" size={28} color={theme.colors.text} />
                 </Animated.View>
@@ -194,77 +286,3 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 9,
-  },
-  container: {
-    position: 'absolute',
-    right: theme.spacing.lg,
-    bottom: 0,
-    width: 140,
-    height: 320,
-    alignItems: 'flex-end',
-    justifyContent: 'flex-end',
-    zIndex: 10,
-  },
-  fabRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 4,
-    shadowColor: theme.colors.textMuted,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-  },
-  miniRow: {
-    position: 'absolute',
-    flexDirection: 'row',
-    alignItems: 'center',
-    right: 0,
-    zIndex: 11,
-  },
-  miniLabel: {
-    marginRight: 12,
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.text,
-    fontWeight: '600',
-    backgroundColor: theme.colors.background,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-  },
-
-  miniButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-  },
-  miniButtonText: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.background,
-    fontWeight: '600',
-  },
-});

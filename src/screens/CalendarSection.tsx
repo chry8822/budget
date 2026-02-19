@@ -15,7 +15,7 @@ import {
   Easing,
 } from 'react-native';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
-import theme from '../theme';
+import { useColorScheme, useTheme } from '../theme/ThemeContext';
 import {
   DailySummaryRow,
   Transaction,
@@ -68,18 +68,22 @@ LocaleConfig.defaultLocale = 'ko';
 
 const SELECTION_FADE_DURATION = 220;
 
+type CalendarDayCellStyles = ReturnType<typeof createCalendarStyles>;
+
 function CalendarDayCell({
   isSelected,
   isLastRow,
   isDisabled,
   onPress,
   children,
+  styles,
 }: {
   isSelected: boolean;
   isLastRow: boolean;
   isDisabled: boolean;
   onPress: () => void;
   children: React.ReactNode;
+  styles: CalendarDayCellStyles;
 }) {
   const selectionOpacity = useRef(new Animated.Value(isSelected ? 1 : 0)).current;
 
@@ -94,25 +98,145 @@ function CalendarDayCell({
 
   return (
     <TouchableOpacity onPress={onPress} style={styles.dayWrapper} activeOpacity={0.7}>
-      <View
-        style={[
-          styles.dayContainer,
-          isLastRow && { borderBottomWidth: 0 },
-        ]}
-      >
+      <View style={[styles.dayContainer, isLastRow && { borderBottomWidth: 0 }]}>
         <Animated.View
-          style={[
-            styles.daySelectionOverlay,
-            { opacity: selectionOpacity },
-          ]}
+          style={[styles.daySelectionOverlay, { opacity: selectionOpacity }]}
           pointerEvents="none"
         />
-        <View style={styles.dayContent}>
-          {children}
-        </View>
+        <View style={styles.dayContent}>{children}</View>
       </View>
     </TouchableOpacity>
   );
+}
+
+function createCalendarStyles(theme: ReturnType<typeof useTheme>) {
+  return StyleSheet.create({
+    header: {
+      marginBottom: theme.spacing.md,
+    },
+    monthText: {
+      ...theme.typography.title,
+    },
+    subText: {
+      ...theme.typography.subtitle,
+      textAlign: 'center',
+      fontSize: theme.typography.sizes.md,
+    },
+    calendarCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 12,
+      overflow: 'hidden',
+      marginBottom: theme.spacing.md,
+    },
+    calendarHeaderContainer: {
+      paddingTop: 8,
+      paddingBottom: 4,
+    },
+    calendarHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 8,
+    },
+    calendarHeaderMonthLabel: {
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+    },
+    calendarHeaderMonthText: {
+      fontSize: theme.typography.sizes.xl,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+    },
+    weekDayRow: {
+      flexDirection: 'row',
+      marginBottom: 4,
+    },
+    weekDayCell: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    hintBold: {
+      fontWeight: 'bold',
+    },
+    weekDayText: {
+      fontSize: theme.typography.sizes.xs,
+      fontWeight: '600',
+      color: theme.colors.textMuted,
+      textAlign: 'center',
+    },
+    dayWrapper: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    dayContainer: {
+      flex: 1,
+      alignSelf: 'stretch',
+      minHeight: 72,
+      minWidth: 44,
+      paddingVertical: 4,
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.colors.border,
+      position: 'relative',
+    },
+    daySelectionOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: theme.colors.primarySoft ?? theme.colors.surface,
+      borderRadius: 8,
+    },
+    dayContent: {
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      minHeight: 44,
+      minWidth: 44,
+    },
+    dayNumber: {
+      fontSize: theme.typography.sizes.md,
+      color: theme.colors.text,
+    },
+    dayNumberDisabled: {
+      color: theme.colors.textMuted,
+    },
+    dayNumberSelected: {
+      color: theme.colors.primary,
+      fontWeight: 'bold',
+    },
+    monthSummaryRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.sm,
+    },
+    monthSummaryLabel: {
+      fontSize: theme.typography.sizes.md,
+      color: theme.colors.textMuted,
+      fontWeight: 'bold',
+    },
+    monthSummaryValue: {
+      fontSize: theme.typography.sizes.sm,
+      fontWeight: 'bold',
+    },
+    monthSummaryIncome: {
+      color: theme.colors.income,
+    },
+    monthSummaryExpense: {
+      color: theme.colors.primary,
+    },
+    dayExpense: {
+      marginTop: 3,
+      fontSize: theme.typography.sizes.xs,
+      color: theme.colors.primary,
+    },
+    dayIncome: {
+      marginTop: 1,
+      fontSize: theme.typography.sizes.xs,
+      color: theme.colors.income,
+    },
+  });
 }
 
 type Props = {
@@ -140,6 +264,9 @@ export default function CalendarSection({
   totalExpense,
   navigation,
 }: Props) {
+  const theme = useTheme();
+  const { colorScheme } = useColorScheme();
+  const styles = useMemo(() => createCalendarStyles(theme), [theme]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTransactions, setSelectedTransactions] = useState<Transaction[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -183,7 +310,7 @@ export default function CalendarSection({
         dotColor: theme.colors.primary,
         customStyles: {
           container: {
-            backgroundColor: 'white',
+            backgroundColor: theme.colors.background,
           },
           text: {
             color: theme.colors.text,
@@ -203,7 +330,7 @@ export default function CalendarSection({
             borderRadius: 8,
           },
           text: {
-            color: theme.colors.background,
+            color: theme.colors.onPrimary,
             fontWeight: 'bold',
           },
         },
@@ -211,7 +338,7 @@ export default function CalendarSection({
     }
 
     return marks;
-  }, [displayDailySummary, selectedDate]);
+  }, [displayDailySummary, selectedDate, theme]);
 
   // 2) 선택 날짜 변경 시 상세 내역 로드
   useEffect(() => {
@@ -275,18 +402,18 @@ export default function CalendarSection({
     <>
       <View style={styles.header}>
         <Text style={styles.subText}>
-          <Text style={{ fontWeight: 'bold' }}>날짜를 누르면</Text> 그날의 지출 내역을 볼 수 있어요.
+          <Text style={styles.hintBold}>날짜를 누르면</Text> 그날의 지출 내역을 볼 수 있어요.
         </Text>
       </View>
 
       <View style={styles.monthSummaryRow}>
         <Text style={styles.monthSummaryLabel}>수입</Text>
-        <Text style={[styles.monthSummaryValue, { color: '#1e88e5' }]}>
+        <Text style={[styles.monthSummaryValue, styles.monthSummaryIncome]}>
           {formatWon(displayTotalIncome)}
         </Text>
 
         <Text style={styles.monthSummaryLabel}>지출</Text>
-        <Text style={[styles.monthSummaryValue, { color: '#e53935' }]}>
+        <Text style={[styles.monthSummaryValue, styles.monthSummaryExpense]}>
           {formatWon(displayTotalExpense)}
         </Text>
       </View>
@@ -295,7 +422,7 @@ export default function CalendarSection({
 
       <View style={styles.calendarCard} pointerEvents="box-none">
         <Calendar
-          key="calendar"
+          key={`calendar-${colorScheme}`}
           hideExtraDays
           enableSwipeMonths
           initialDate={initialMonth}
@@ -313,7 +440,10 @@ export default function CalendarSection({
           customHeader={() => (
             <View style={styles.calendarHeaderContainer}>
               <View style={styles.calendarHeaderRow}>
-                <TouchableOpacity onPress={goToPrevMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <TouchableOpacity
+                  onPress={goToPrevMonth}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
                   <Ionicons name="chevron-back" size={18} color={theme.colors.text} />
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -324,7 +454,10 @@ export default function CalendarSection({
                     {displayYear}년 {displayMonth}월
                   </Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={goToNextMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <TouchableOpacity
+                  onPress={goToNextMonth}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
                   <Ionicons name="chevron-forward" size={18} color={theme.colors.text} />
                 </TouchableOpacity>
               </View>
@@ -358,7 +491,7 @@ export default function CalendarSection({
             const thisRow = Math.floor((firstDayOfWeek + (date?.day ?? 1) - 1) / 7);
             const lastRow = Math.floor((firstDayOfWeek + lastDate - 1) / 7);
             const isLastRow = thisRow === lastRow;
-            
+
             const key = date.dateString; // 'YYYY-MM-DD'
             const row = summaryMap[key]; // DailySummaryRow or undefined
 
@@ -380,6 +513,7 @@ export default function CalendarSection({
                 isLastRow={isLastRow}
                 isDisabled={isDisabled}
                 onPress={handleDayPress}
+                styles={styles}
               >
                 <Text
                   style={[
@@ -435,122 +569,3 @@ export default function CalendarSection({
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    marginBottom: theme.spacing.md,
-  },
-  monthText: {
-    ...theme.typography.title,
-  },
-  subText: {
-    ...theme.typography.subtitle,
-    textAlign: 'center',
-    fontSize: theme.typography.sizes.md,
-  },
-  calendarCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: theme.spacing.md,
-  },
-  calendarHeaderContainer: {
-    paddingTop: 8,
-    paddingBottom: 4,
-  },
-  calendarHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  calendarHeaderMonthLabel: {
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-  },
-  calendarHeaderMonthText: {
-    fontSize: theme.typography.sizes.xl,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-  },
-  weekDayRow: {
-    flexDirection: 'row',
-    marginBottom: 4,
-  },
-  weekDayCell: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  weekDayText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-  },
-  dayWrapper: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayContainer: {
-    flex: 1,
-    alignSelf: 'stretch',
-    minHeight: 72,
-    minWidth: 44,
-    paddingVertical: 4,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E0E0E0',
-    position: 'relative',
-  },
-  daySelectionOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: theme.colors.primarySoft ?? '#EEF3FF',
-    borderRadius: 8,
-  },
-  dayContent: {
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    minHeight: 44,
-    minWidth: 44,
-  },
-  dayNumber: {
-    fontSize: 16,
-    color: theme.colors.text,
-  },
-  dayNumberDisabled: {
-    color: theme.colors.textMuted,
-  },
-  dayNumberSelected: {
-    color: theme.colors.primary,
-    fontWeight: 'bold',
-  },
-  dayExpense: {
-    marginTop: 3,
-    fontSize: 12,
-    color: '#e53935',
-  },
-  dayIncome: {
-    marginTop: 1,
-    fontSize: 12,
-    color: '#1e88e5',
-  },
-  monthSummaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.sm,
-  },
-  monthSummaryLabel: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.textMuted,
-    fontWeight: 'bold',
-  },
-  monthSummaryValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-});

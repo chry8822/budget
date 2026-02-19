@@ -16,21 +16,28 @@ import TransactionsScreen from './src/screens/TransactionsScreen';
 import StatsScreen from './src/screens/StatsScreen';
 import AddTransactionScreen from './src/screens/AddTransactionScreen';
 import { initDatabase } from './src/db/database';
-import theme from './src/theme';
 import EditTransactionScreen from './src/screens/EditTransactionScreen';
 import SummaryScreen from './src/screens/SummaryScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 import { TransactionChangeProvider } from './src/components/common/TransactionChangeContext';
 import BudgetSettingScreen from './src/screens/BudgetSettingScreen';
 import ErrorBoundary from './src/components/common/ErrorBoundary';
+import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
+import type { AppTheme } from './src/theme';
 
 import Toast, { BaseToast, BaseToastProps, ErrorToast } from 'react-native-toast-message';
 import HapticWrapper from './src/components/common/HapticWrapper';
-
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-// 1) 탭 네비게이터 (하단 탭 3개)
+/** 탭 아이콘: tabBarIconSize 옵션 미지원으로 콜백 안에서 size를 직접 지정. 아이콘 하단 여백만 유지. */
+const TAB_ICON_PADDING = { marginBottom: 2 };
+
 function MainTabs() {
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -38,7 +45,10 @@ function MainTabs() {
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarStyle: {
-          backgroundColor: theme.colors.tabBarBackground ?? '#FFFFFF',
+          backgroundColor: theme.colors.tabBarBackground ?? theme.colors.background,
+          height: 60 + insets.bottom,
+          paddingTop: 10,
+          paddingBottom: insets.bottom + 10,
         },
         tabBarButton: (props) => (
           <HapticWrapper
@@ -52,23 +62,35 @@ function MainTabs() {
         ),
         tabBarIcon: ({ color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap = 'home-outline';
-
           if (route.name === 'Home') iconName = 'home-outline';
           if (route.name === 'Transactions') iconName = 'list-outline';
           if (route.name === 'Stats') iconName = 'stats-chart-outline';
           if (route.name === 'Summary') iconName = 'pie-chart-outline';
-
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return (
+            <View style={TAB_ICON_PADDING}>
+              <Ionicons name={iconName} size={24} color={color} />
+            </View>
+          );
         },
         tabBarLabel: ({ color }) => {
           let label = '';
-
           if (route.name === 'Home') label = '홈';
           if (route.name === 'Transactions') label = '내역';
           if (route.name === 'Stats') label = '통계';
-          if (route.name === 'Summary') label = '요약';
-
-          return <Text style={{ color, fontSize: 11 }}>{label}</Text>;
+          if (route.name === 'Summary') label = '요약/설정';
+          return (
+            <Text
+              style={{
+                color,
+                fontSize: theme.typography.sizes.md,
+                fontWeight: 'bold',
+                marginTop: 10,
+                marginBottom: 2,
+              }}
+            >
+              {label}
+            </Text>
+          );
         },
       })}
     >
@@ -80,43 +102,67 @@ function MainTabs() {
   );
 }
 
-const toastConfig = {
-  success: (props: BaseToastProps) => (
-    <BaseToast
-      {...props}
-      style={{ borderLeftColor: '#4CAF50' }}
-      contentContainerStyle={{ paddingHorizontal: 15 }}
-      text1Style={{
-        fontSize: 20, // 제목 크기
-        fontWeight: 'bold',
-      }}
-      text2Style={{
-        fontSize: 16, // 설명 크기
-      }}
-    />
-  ),
-  error: (props: BaseToastProps) => (
-    <ErrorToast
-      {...props}
-      style={{
-        borderWidth: 1,
-        borderColor: '#FF4D4F',
-        borderLeftColor: '#FF4D4F',
-        marginTop: theme.spacing.md,
-      }}
-      text1Style={{
-        fontSize: 20,
-        fontWeight: 'bold',
-      }}
-      text2Style={{
-        fontSize: 16,
-        color: '#FF4D4F',
-      }}
-    />
-  ),
-};
+function makeToastConfig(theme: AppTheme) {
+  return {
+    success: (props: BaseToastProps) => (
+      <BaseToast
+        {...props}
+        style={{ borderLeftColor: '#4CAF50' }}
+        contentContainerStyle={{ paddingHorizontal: 15 }}
+        text1Style={{ fontSize: 20, fontWeight: 'bold' }}
+        text2Style={{ fontSize: 16 }}
+      />
+    ),
+    error: (props: BaseToastProps) => (
+      <ErrorToast
+        {...props}
+        style={{
+          borderWidth: 1,
+          borderColor: theme.colors.danger,
+          borderLeftColor: theme.colors.danger,
+          marginTop: theme.spacing.md,
+        }}
+        text1Style={{ fontSize: 20, fontWeight: 'bold' }}
+        text2Style={{ fontSize: 16, color: theme.colors.danger }}
+      />
+    ),
+  };
+}
 
-// 2) 전체 앱 루트 (Stack + Tabs + 지출 추가 화면)
+function AppContent() {
+  const theme = useTheme();
+  return (
+    <>
+      <NavigationContainer>
+        <Stack.Navigator>
+          <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="AddTransaction"
+            component={AddTransactionScreen}
+            options={{ title: '지출 추가', headerBackTitle: '뒤로', headerShown: false }}
+          />
+          <Stack.Screen
+            name="EditTransaction"
+            component={EditTransactionScreen}
+            options={{ title: '지출 수정', headerBackTitle: '뒤로', headerShown: false }}
+          />
+          <Stack.Screen
+            name="BudgetSetting"
+            component={BudgetSettingScreen}
+            options={{ title: '예산 설정', headerShown: false }}
+          />
+          <Stack.Screen
+            name="Settings"
+            component={SettingsScreen}
+            options={{ title: '설정', headerShown: false }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+      <Toast config={makeToastConfig(theme)} />
+    </>
+  );
+}
+
 export default function App() {
   const [isDbReady, setIsDbReady] = useState(false);
   const [dbError, setDbError] = useState(false);
@@ -133,64 +179,42 @@ export default function App() {
       });
   }, []);
 
-  // DB 초기화 실패 화면
   if (dbError) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-        <Ionicons name="alert-circle-outline" size={64} color={theme.colors.primary} />
-        <Text style={{ fontSize: 18, fontWeight: 'bold', marginTop: 16, color: theme.colors.text }}>
-          데이터베이스 오류
-        </Text>
-        <Text style={{ fontSize: 14, color: theme.colors.textMuted, textAlign: 'center', marginTop: 8 }}>
-          앱을 시작할 수 없습니다.{'\n'}앱을 종료 후 다시 실행해 주세요.
-        </Text>
-      </View>
+      <ThemeProvider>
+        <DbErrorScreen />
+      </ThemeProvider>
     );
   }
 
   if (!isDbReady) {
-    return null; // 스플래시 화면이 보이는 동안
+    return null;
   }
 
   return (
-    <ErrorBoundary>
-      <TransactionChangeProvider>
-        <NavigationContainer>
-          <Stack.Navigator>
-            {/* 하단 탭 3개가 들어있는 메인 화면 */}
-            <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
+    <ThemeProvider>
+      <ErrorBoundary>
+        <TransactionChangeProvider>
+          <AppContent />
+        </TransactionChangeProvider>
+      </ErrorBoundary>
+    </ThemeProvider>
+  );
+}
 
-            {/* 지출 추가 화면 */}
-            <Stack.Screen
-              name="AddTransaction"
-              component={AddTransactionScreen}
-              options={{
-                title: '지출 추가',
-                headerBackTitle: '뒤로',
-                headerShown: false,
-              }}
-            />
-            <Stack.Screen
-              name="EditTransaction"
-              component={EditTransactionScreen}
-              options={{
-                title: '지출 수정',
-                headerBackTitle: '뒤로',
-                headerShown: false,
-              }}
-            />
-            <Stack.Screen
-              name="BudgetSetting"
-              component={BudgetSettingScreen}
-              options={{
-                title: '예산 설정',
-                headerShown: false,
-              }}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
-        <Toast config={toastConfig} />
-      </TransactionChangeProvider>
-    </ErrorBoundary>
+function DbErrorScreen() {
+  const theme = useTheme();
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      <Ionicons name="alert-circle-outline" size={64} color={theme.colors.primary} />
+      <Text style={{ fontSize: 18, fontWeight: 'bold', marginTop: 16, color: theme.colors.text }}>
+        데이터베이스 오류
+      </Text>
+      <Text
+        style={{ fontSize: 14, color: theme.colors.textMuted, textAlign: 'center', marginTop: 8 }}
+      >
+        앱을 시작할 수 없습니다.{'\n'}앱을 종료 후 다시 실행해 주세요.
+      </Text>
+    </View>
   );
 }

@@ -7,7 +7,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import theme from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
 
 type Props = {
   children: ReactNode;
@@ -17,6 +17,60 @@ type State = {
   hasError: boolean;
   error: Error | null;
 };
+
+function ErrorView({ onReset }: { onReset: () => void }) {
+  const theme = useTheme();
+  const styles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 32,
+          backgroundColor: theme.colors.background,
+        },
+        title: {
+          fontSize: theme.typography.sizes.xl,
+          fontWeight: 'bold',
+          color: theme.colors.text,
+          marginTop: 16,
+        },
+        message: {
+          fontSize: theme.typography.sizes.md,
+          color: theme.colors.textMuted,
+          textAlign: 'center',
+          marginTop: 8,
+          lineHeight: 22,
+        },
+        button: {
+          marginTop: 24,
+          backgroundColor: theme.colors.primary,
+          paddingHorizontal: 32,
+          paddingVertical: 12,
+          borderRadius: 8,
+        },
+        buttonText: {
+          color: theme.colors.onPrimary,
+          fontSize: theme.typography.sizes.md,
+          fontWeight: 'bold',
+        },
+      }),
+    [theme],
+  );
+  return (
+    <View style={styles.container}>
+      <Ionicons name="bug-outline" size={64} color={theme.colors.primary} />
+      <Text style={styles.title}>앗, 문제가 발생했어요</Text>
+      <Text style={styles.message}>
+        예상치 못한 오류가 발생했습니다.{'\n'}아래 버튼을 눌러 다시 시도해 주세요.
+      </Text>
+      <Pressable style={styles.button} onPress={onReset}>
+        <Text style={styles.buttonText}>다시 시도</Text>
+      </Pressable>
+    </View>
+  );
+}
 
 export default class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
@@ -38,55 +92,8 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      return (
-        <View style={styles.container}>
-          <Ionicons name="bug-outline" size={64} color={theme.colors.primary} />
-          <Text style={styles.title}>앗, 문제가 발생했어요</Text>
-          <Text style={styles.message}>
-            예상치 못한 오류가 발생했습니다.{'\n'}아래 버튼을 눌러 다시 시도해 주세요.
-          </Text>
-          <Pressable style={styles.button} onPress={this.handleReset}>
-            <Text style={styles.buttonText}>다시 시도</Text>
-          </Pressable>
-        </View>
-      );
+      return <ErrorView onReset={this.handleReset} />;
     }
-
     return this.props.children;
   }
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    backgroundColor: theme.colors.background,
-  },
-  title: {
-    fontSize: theme.typography.sizes.xl,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    marginTop: 16,
-  },
-  message: {
-    fontSize: theme.typography.sizes.md,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 22,
-  },
-  button: {
-    marginTop: 24,
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: theme.typography.sizes.md,
-    fontWeight: 'bold',
-  },
-});

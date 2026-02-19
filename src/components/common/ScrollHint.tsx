@@ -5,11 +5,11 @@
  * - ScrollView, FlatList 모두 지원
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Entypo } from '@expo/vector-icons';
-import theme from '../../theme';
 import { ScrollView } from 'react-native';
+import { useTheme } from '../../theme/ThemeContext';
 
 type AnimatedValue = Animated.Value | Animated.AnimatedInterpolation<number>;
 
@@ -23,6 +23,7 @@ type Props = {
 };
 
 export default function ScrollHint({ opacity, top, bottom, visible = true, scrollRef, scrollAmount }: Props) {
+    const theme = useTheme();
     const translateY = useRef(new Animated.Value(0)).current;
     const arrow1Opacity = useRef(new Animated.Value(0.3)).current;
     const arrow2Opacity = useRef(new Animated.Value(0.3)).current;
@@ -65,6 +66,38 @@ export default function ScrollHint({ opacity, top, bottom, visible = true, scrol
 
     const arrowOpacities: AnimatedValue[] = [arrow1Opacity, arrow2Opacity, arrow3Opacity];
 
+    const styles = useMemo(
+        () =>
+            StyleSheet.create({
+                pressable: { alignItems: 'center' },
+                container: {
+                    position: 'absolute',
+                    right: theme.spacing.lg,
+                    zIndex: 30,
+                    alignItems: 'center',
+                    width: 56,
+                },
+                mouseShell: {
+                    width: 26,
+                    height: 42,
+                    borderRadius: 13,
+                    borderWidth: 2,
+                    borderColor: theme.colors.border,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: 'transparent',
+                },
+                mouseWheel: {
+                    width: 2,
+                    height: 8,
+                    borderRadius: 1,
+                    backgroundColor: theme.colors.textMuted,
+                },
+                arrowWrapper: { marginTop: 2 },
+            }),
+        [theme],
+    );
+
     const onPress = () => {
         const ref = scrollRef?.current;
         if (!ref) return;
@@ -93,14 +126,14 @@ export default function ScrollHint({ opacity, top, bottom, visible = true, scrol
                 },
             ]}
         >
-            <Pressable onPress={onPress} style={{ alignItems: 'center' }}>
+            <Pressable onPress={onPress} style={styles.pressable}>
                 <View style={styles.mouseShell}>
                     <View style={styles.mouseWheel} />
                 </View>
 
                 {arrowOpacities.map((arrowOpacity, index) => (
                     <Animated.View key={index} style={[styles.arrowWrapper, { opacity: arrowOpacity }]}>
-                        <Entypo name="chevron-down" size={14} color="rgba(0,0,0,0.5)" />
+                        <Entypo name="chevron-down" size={14} color={theme.colors.textMuted} />
                     </Animated.View>
                 ))}
             </Pressable>
@@ -108,31 +141,3 @@ export default function ScrollHint({ opacity, top, bottom, visible = true, scrol
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        position: 'absolute',
-        right: theme.spacing.lg,
-        zIndex: 30,
-        alignItems: 'center',
-        width: 56,
-    },
-    mouseShell: {
-        width: 26,
-        height: 42,
-        borderRadius: 13,
-        borderWidth: 2,
-        borderColor: 'rgba(0,0,0,0.4)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'transparent',
-    },
-    mouseWheel: {
-        width: 2,
-        height: 8,
-        borderRadius: 1,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-    },
-    arrowWrapper: {
-        marginTop: 2,
-    },
-});

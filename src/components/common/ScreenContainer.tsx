@@ -2,13 +2,13 @@
  * 화면 공통 레이아웃 컴포넌트
  * - SafeAreaView + 기본 배경색/패딩 적용
  * - 모든 페이지에서 공통으로 사용
+ * - useTheme 사용으로 다크모드 시 배경 자동 반영
  */
 
 import React, { ReactNode } from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import colors from '../../theme/colors';
-import spacing from '../../theme/spacing';
+import { useTheme } from '../../theme/ThemeContext';
 
 type ScreenContainerProps = {
   children: ReactNode;
@@ -18,12 +18,16 @@ type ScreenContainerProps = {
 };
 
 export default function ScreenContainer({ children, style, safeBottom = false }: ScreenContainerProps) {
+  const theme = useTheme();
   const edges: ('top' | 'left' | 'right' | 'bottom')[] = ['top', 'left', 'right'];
   if (safeBottom) edges.push('bottom');
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={edges}>
-      <View style={[styles.inner, style]}>{children}</View>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: theme.colors.background, paddingTop: theme.spacing.md }]}
+      edges={edges}
+    >
+      <View style={[styles.inner, { paddingHorizontal: theme.spacing.md }, style]}>{children}</View>
     </SafeAreaView>
   );
 }
@@ -31,11 +35,8 @@ export default function ScreenContainer({ children, style, safeBottom = false }:
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
-    paddingTop: spacing.md,
   },
   inner: {
     flex: 1,
-    paddingHorizontal: spacing.md,
   },
 });

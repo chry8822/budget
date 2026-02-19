@@ -4,9 +4,9 @@
  * - 기간 필터에서 커스텀 월 선택 시 사용
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import theme from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
 
 type MonthYearPickerProps = {
     visible: boolean;
@@ -41,9 +41,99 @@ export default function MonthYearPicker({
     onConfirm,
     onCancel,
 }: MonthYearPickerProps) {
+    const theme = useTheme();
     const [tempYear, setTempYear] = useState(year);
     const [tempMonth, setTempMonth] = useState(month);
     const years = buildYears(year);
+
+    const styles = useMemo(
+        () =>
+            StyleSheet.create({
+                overlay: {
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.4)',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                },
+                container: {
+                    width: '86%',
+                    backgroundColor: theme.colors.surface,
+                    padding: theme.spacing.lg,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                },
+                title: {
+                    ...theme.typography.subtitle,
+                    fontWeight: 'bold',
+                    marginBottom: theme.spacing.sm,
+                    color: theme.colors.text,
+                },
+                wheelRow: {
+                    flexDirection: 'row',
+                    marginTop: theme.spacing.sm,
+                    marginBottom: theme.spacing.md,
+                    gap: theme.spacing.md as any,
+                },
+                wheelColumn: { flex: 1 },
+                wheelLabel: {
+                    fontSize: theme.typography.sizes.xs,
+                    color: theme.colors.textMuted,
+                    marginBottom: theme.spacing.xs,
+                    textAlign: 'center',
+                },
+                wheelBox: {
+                    height: WHEEL_BOX_HEIGHT,
+                    width: '100%',
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    backgroundColor: theme.colors.background,
+                    overflow: 'hidden',
+                    position: 'relative',
+                },
+                wheelContent: { paddingVertical: WHEEL_PADDING },
+                wheelItem: {
+                    height: WHEEL_ITEM_HEIGHT,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                },
+                wheelItemActive: { backgroundColor: theme.colors.primarySoft },
+                wheelItemText: {
+                    fontSize: theme.typography.sizes.md,
+                    color: theme.colors.text,
+                },
+                wheelItemTextActive: {
+                    color: theme.colors.primary,
+                    fontWeight: 'bold',
+                    fontSize: theme.typography.sizes.lg,
+                },
+                buttons: {
+                    flexDirection: 'row',
+                    justifyContent: 'flex-end',
+                    marginTop: theme.spacing.sm,
+                    gap: theme.spacing.sm as any,
+                },
+                button: {
+                    paddingHorizontal: theme.spacing.sm,
+                    paddingVertical: theme.spacing.xs,
+                    borderRadius: 8,
+                },
+                buttonGhost: { backgroundColor: theme.colors.background },
+                buttonPrimary: { backgroundColor: theme.colors.primary },
+                buttonGhostText: { ...theme.typography.body, color: theme.colors.text },
+                buttonPrimaryText: {
+                    ...theme.typography.body,
+                    color: theme.colors.onPrimary,
+                    fontWeight: 'bold',
+                },
+            }),
+        [theme],
+    );
 
     const yearScrollRef = useRef<ScrollView>(null);
     const monthScrollRef = useRef<ScrollView>(null);
@@ -285,98 +375,3 @@ export default function MonthYearPicker({
     );
 }
 
-const styles = StyleSheet.create({
-    overlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.4)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    container: {
-        width: '86%',
-        backgroundColor: theme.colors.background,
-        padding: theme.spacing.lg,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-    },
-    title: {
-        ...theme.typography.subtitle,
-        fontWeight: 'bold',
-        marginBottom: theme.spacing.sm,
-    },
-    wheelRow: {
-        flexDirection: 'row',
-        marginTop: theme.spacing.sm,
-        marginBottom: theme.spacing.md,
-        gap: theme.spacing.md as any,
-    },
-    wheelColumn: {
-        flex: 1,
-    },
-    wheelLabel: {
-        fontSize: theme.typography.sizes.xs,
-        color: theme.colors.textMuted,
-        marginBottom: theme.spacing.xs,
-        textAlign: 'center',
-    },
-    wheelBox: {
-        height: WHEEL_BOX_HEIGHT,
-        width: '100%',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        backgroundColor: theme.colors.background,
-        overflow: 'hidden',
-        position: 'relative',
-    },
-    wheelContent: {
-        paddingVertical: WHEEL_PADDING,
-    },
-    wheelItem: {
-        height: WHEEL_ITEM_HEIGHT,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    wheelItemActive: {
-        backgroundColor: theme.colors.primarySoft,
-    },
-    wheelItemText: {
-        fontSize: theme.typography.sizes.md,
-        color: theme.colors.text,
-    },
-    wheelItemTextActive: {
-        color: theme.colors.primary,
-        fontWeight: 'bold',
-        fontSize: theme.typography.sizes.lg,
-    },
-    buttons: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        marginTop: theme.spacing.sm,
-        gap: theme.spacing.sm as any,
-    },
-    button: {
-        paddingHorizontal: theme.spacing.sm,
-        paddingVertical: theme.spacing.xs,
-        borderRadius: 8,
-    },
-    buttonGhost: {
-        backgroundColor: theme.colors.surface,
-    },
-    buttonPrimary: {
-        backgroundColor: theme.colors.primary,
-    },
-    buttonGhostText: {
-        ...theme.typography.body,
-    },
-    buttonPrimaryText: {
-        ...theme.typography.body,
-        color: theme.colors.background,
-        fontWeight: 'bold',
-    },
-});

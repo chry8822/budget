@@ -11,7 +11,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { getAllTransactions, Transaction, deleteTransactionById } from '../db/database';
 import { Ionicons } from '@expo/vector-icons';
-import theme from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 import { formatWon } from '../utils/format';
 import { Alert, ScrollView } from 'react-native';
 import MonthYearPicker from '../components/common/MonthYearPicker';
@@ -24,6 +24,7 @@ type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type SummaryRange = 'thisMonth' | 'lastMonth' | 'all' | 'custom';
 
 export default function TransactionsScreen() {
+  const theme = useTheme();
   const { notifyChanged } = useTransactionChange();
   const {
     isScrollable,
@@ -66,7 +67,117 @@ export default function TransactionsScreen() {
         onPress: () => navigation.navigate('AddTransaction', { mode: 'income' }),
       },
     ],
-    [navigation],
+    [navigation, theme.colors.primary, theme.colors.income],
+  );
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        emptyText: {
+          fontSize: theme.typography.sizes.lg,
+          color: theme.colors.textMuted,
+          textAlign: 'center',
+          marginTop: theme.spacing.md,
+        },
+        itemRow: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          paddingVertical: theme.spacing.sm,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+        },
+        itemLeft: {
+          flex: 1,
+          paddingRight: theme.spacing.sm,
+        },
+        itemRight: {
+          alignItems: 'flex-end',
+          minWidth: 110,
+        },
+        amountRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: theme.spacing.xs as number,
+        },
+        itemCategory: {
+          ...theme.typography.body,
+          fontWeight: 'bold',
+          marginBottom: theme.spacing.xs,
+          fontSize: theme.typography.sizes.sm,
+        },
+        itemSubCategory: {
+          ...theme.typography.body,
+          fontSize: theme.typography.sizes.xs,
+        },
+        itemMemo: {
+          ...theme.typography.body,
+          fontSize: theme.typography.sizes.xs,
+          color: theme.colors.textMuted,
+        },
+        itemAmount: {
+          ...theme.typography.body,
+          fontWeight: 'bold',
+          color: theme.colors.primary,
+        },
+        itemAmountIncome: {
+          color: theme.colors.income,
+        },
+        itemDate: {
+          ...theme.typography.body,
+          fontSize: theme.typography.sizes.xs,
+          color: theme.colors.textMuted,
+        },
+        itemPayment: {
+          ...theme.typography.body,
+          fontSize: theme.typography.sizes.xs,
+          color: theme.colors.textMuted,
+        },
+        deleteButton: {
+          padding: 4,
+        },
+        summaryTabs: {
+          flexDirection: 'row',
+          marginTop: theme.spacing.sm,
+          gap: theme.spacing.sm as number,
+        },
+        summaryTab: {
+          paddingHorizontal: theme.spacing.sm,
+          paddingVertical: theme.spacing.xs,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+        },
+        summaryTabActive: {
+          backgroundColor: theme.colors.primary,
+          borderColor: theme.colors.primary,
+        },
+        summaryTabText: {
+          fontSize: theme.typography.sizes.xs,
+          color: theme.colors.textMuted,
+        },
+        summaryTabTextActive: {
+          color: theme.colors.onPrimary,
+          fontWeight: 'bold',
+        },
+        summaryCard: {
+          marginTop: theme.spacing.sm,
+          marginBottom: theme.spacing.sm,
+          padding: theme.spacing.md,
+          borderRadius: 12,
+          backgroundColor: theme.colors.surface,
+        },
+        summaryTitle: {
+          fontSize: theme.typography.sizes.sm,
+          color: theme.colors.textMuted,
+          marginBottom: theme.spacing.xs,
+        },
+        summaryAmount: {
+          fontSize: theme.typography.sizes.lg,
+          fontWeight: 'bold',
+          color: theme.colors.primary,
+        },
+      }),
+    [theme],
   );
 
   const loadTransactions = async () => {
@@ -344,109 +455,3 @@ export default function TransactionsScreen() {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  emptyText: {
-    fontSize: theme.typography.sizes.lg,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-    marginTop: theme.spacing.md,
-  },
-  itemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  itemLeft: {
-    flex: 1,
-    paddingRight: theme.spacing.sm,
-  },
-  itemRight: {
-    alignItems: 'flex-end',
-    minWidth: 110,
-  },
-  amountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs as any,
-  },
-  itemCategory: {
-    ...theme.typography.body,
-    fontWeight: 'bold',
-    marginBottom: theme.spacing.xs,
-    fontSize: theme.typography.sizes.sm,
-  },
-  itemSubCategory: {
-    ...theme.typography.body,
-    fontSize: theme.typography.sizes.xs,
-  },
-  itemMemo: {
-    ...theme.typography.body,
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.textMuted,
-  },
-  itemAmount: {
-    ...theme.typography.body,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
-  },
-  itemAmountIncome: {
-    color: theme.colors.income,
-  },
-  itemDate: {
-    ...theme.typography.body,
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.textMuted,
-  },
-  itemPayment: {
-    ...theme.typography.body,
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.textMuted,
-  },
-  deleteButton: {
-    padding: 4,
-  },
-  summaryTabs: {
-    flexDirection: 'row',
-    marginTop: theme.spacing.sm,
-    gap: theme.spacing.sm as any,
-  },
-  summaryTab: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  summaryTabActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  summaryTabText: {
-    fontSize: theme.typography.sizes.xs,
-    color: theme.colors.textMuted,
-  },
-  summaryTabTextActive: {
-    color: theme.colors.background,
-    fontWeight: 'bold',
-  },
-  summaryCard: {
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
-    padding: theme.spacing.md,
-    borderRadius: 12,
-    backgroundColor: theme.colors.surface,
-  },
-  summaryTitle: {
-    fontSize: theme.typography.sizes.sm,
-    color: theme.colors.textMuted,
-    marginBottom: theme.spacing.xs,
-  },
-  summaryAmount: {
-    fontSize: theme.typography.sizes.lg,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
-  },
-});

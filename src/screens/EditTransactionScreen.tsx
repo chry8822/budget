@@ -3,7 +3,7 @@
  * - 기존 거래 데이터를 불러와 TransactionForm을 edit 모드로 렌더링
  */
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import TransactionForm from '../components/transactions/TransactionForm';
 import { RootStackParamList } from '../navigation/types';
@@ -40,7 +40,7 @@ export default function EditTransactionScreen({ route, navigation }: Props) {
 
     if (loading || !transaction) {
         return (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" />
                 <Text>내역을 불러오는 중...</Text>
             </View>
@@ -61,3 +61,11 @@ export default function EditTransactionScreen({ route, navigation }: Props) {
         />
     );
 }
+
+const styles = StyleSheet.create({
+    loadingContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+});

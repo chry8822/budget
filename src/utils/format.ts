@@ -7,6 +7,7 @@
  * @returns 포맷된 금액 문자열
  */
 export function formatAmount(amount: number): string {
+  if (!Number.isFinite(amount)) return '0원';
   const man = amount / 10000;
   if (man === 0) return '0원';
 
@@ -25,5 +26,6 @@ export function formatAmount(amount: number): string {
  * @returns 포맷된 금액 문자열
  */
 export function formatWon(amount: number): string {
+  if (!Number.isFinite(amount)) return '0원';
   return `${amount.toLocaleString()}원`;
 }
