@@ -78,5 +78,6 @@ iOS: com.chrys.hanunssok, Android: com.chrys.hanunssok
 라이트 — 흰 배경, primary 코랄/레드, 서페이스 그레이
 다크 — 배경 #121212, 서페이스 #1E1E1E, 텍스트 #E8E8E8
 설정 화면에서 스위치로 전환, 선택값은 AsyncStorage에 저장
+
 📄 라이선스
-0BSD (package.json 기준)
+© 2025 [이름]. All rights reserved. 무단 사용·배포·상업 이용 금지.
