@@ -527,7 +527,7 @@ export default function SummaryScreen() {
               </View>
 
               {/* 2-B. 예산 vs 지출 */}
-              <View style={styles.card}>
+              {/* <View style={styles.card}>
                 <View style={styles.cardTitleRow}>
                   <Text style={styles.cardTitle}>예산 사용 현황</Text>
                   <HapticWrapper
@@ -560,7 +560,7 @@ export default function SummaryScreen() {
                     초과했어요.
                   </Text>
                 )}
-              </View>
+              </View> */}
 
               {/* 3-A. 총 지출 + 일 평균 */}
               <View style={styles.card}>
