@@ -27,7 +27,7 @@ import type { AppTheme } from './src/theme';
 
 import Toast, { BaseToast, BaseToastProps, ErrorToast } from 'react-native-toast-message';
 import HapticWrapper from './src/components/common/HapticWrapper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -182,7 +182,9 @@ export default function App() {
   if (dbError) {
     return (
       <ThemeProvider>
-        <DbErrorScreen />
+        <SafeAreaProvider>
+          <DbErrorScreen />
+        </SafeAreaProvider>
       </ThemeProvider>
     );
   }
@@ -193,11 +195,13 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <ErrorBoundary>
-        <TransactionChangeProvider>
-          <AppContent />
-        </TransactionChangeProvider>
-      </ErrorBoundary>
+      <SafeAreaProvider>
+        <ErrorBoundary>
+          <TransactionChangeProvider>
+            <AppContent />
+          </TransactionChangeProvider>
+        </ErrorBoundary>
+      </SafeAreaProvider>
     </ThemeProvider>
   );
 }

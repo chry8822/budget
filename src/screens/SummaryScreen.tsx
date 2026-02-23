@@ -141,7 +141,7 @@ export default function SummaryScreen() {
           marginBottom: theme.spacing.xs,
         },
         cardTitle: {
-          fontSize: theme.typography.sizes.md,
+          fontSize: theme.typography.sizes.lg,
           color: theme.colors.text,
           marginBottom: theme.spacing.xs,
           fontWeight: 'bold',
@@ -260,6 +260,17 @@ export default function SummaryScreen() {
           fontSize: theme.typography.sizes.xs,
           color: theme.colors.textMuted,
           marginBottom: theme.spacing.sm,
+        },
+        budgetTabHeaderRow: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: theme.spacing.sm,
+        },
+        budgetTabSubtitleInRow: {
+          flex: 1,
+          fontSize: theme.typography.sizes.xs,
+          color: theme.colors.textMuted,
         },
         remainingBudgetBlock: {
           flexDirection: 'row',
@@ -682,19 +693,21 @@ export default function SummaryScreen() {
               return (
                 <View style={styles.budgetCard}>
                   <Text style={styles.cardTitle}>예산별 지출</Text>
-                  <Text style={styles.budgetTabSubtitle}>
-                    예산을 설정한 카테고리의 지출만 집계돼요.
-                  </Text>
+                  <View style={styles.budgetTabHeaderRow}>
+                    <Text style={styles.budgetTabSubtitleInRow}>
+                      예산을 설정한 카테고리의 지출만 집계돼요.
+                    </Text>
+                    <Pressable
+                      onPress={() => navigation.navigate('BudgetSetting', { year, month })}
+                      style={styles.budgetButton}
+                    >
+                      <Text style={styles.budgetLink}>예산설정</Text>
+                    </Pressable>
+                  </View>
 
                   {budgetRows.length === 0 ? (
                     <View style={styles.remainingBudgetBlock}>
                       <Text style={styles.emptyText}>예산을 설정하면 여기서 확인할 수 있어요.</Text>
-                      <Pressable
-                        onPress={() => navigation.navigate('BudgetSetting', { year, month })}
-                        style={styles.budgetButton}
-                      >
-                        <Text style={styles.budgetLink}>예산설정</Text>
-                      </Pressable>
                     </View>
                   ) : (
                     <>

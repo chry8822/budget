@@ -141,7 +141,7 @@ export default function TransactionsScreen() {
           gap: theme.spacing.sm as number,
         },
         summaryTab: {
-          paddingHorizontal: theme.spacing.sm,
+          paddingHorizontal: theme.spacing.md,
           paddingVertical: theme.spacing.xs,
           borderRadius: 999,
           borderWidth: 1,
@@ -152,7 +152,7 @@ export default function TransactionsScreen() {
           borderColor: theme.colors.primary,
         },
         summaryTabText: {
-          fontSize: theme.typography.sizes.xs,
+          fontSize: theme.typography.sizes.md,
           color: theme.colors.textMuted,
         },
         summaryTabTextActive: {
@@ -188,7 +188,7 @@ export default function TransactionsScreen() {
     } catch (e) {
       console.error(e);
       alert('내역을 불러오는 중 오류가 발생했습니다.');
-    } 
+    }
   };
 
   useEffect(() => {
@@ -298,7 +298,8 @@ export default function TransactionsScreen() {
     setShowMonthPicker(false);
   };
 
-  const isEmpty = summaryRange === 'all' ? transactions.length === 0 : filteredTransactions.length === 0;
+  const isEmpty =
+    summaryRange === 'all' ? transactions.length === 0 : filteredTransactions.length === 0;
 
   const getEmptyMessage = (): string => {
     if (summaryRange === 'all') {
@@ -381,9 +382,7 @@ export default function TransactionsScreen() {
           <Text style={styles.summaryAmount}>{formatWon(getSummaryTotal())}</Text>
         </View>
         {isEmpty ? (
-          <Text style={styles.emptyText}>
-            {getEmptyMessage()}
-          </Text>
+          <Text style={styles.emptyText}>{getEmptyMessage()}</Text>
         ) : (
           <>
             <FlatList

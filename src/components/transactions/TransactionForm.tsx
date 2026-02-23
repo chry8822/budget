@@ -18,7 +18,7 @@ import {
   Platform,
 } from 'react-native';
 import ScreenContainer from '../common/ScreenContainer';
-import { useTheme } from '../../theme/ThemeContext';
+import { useTheme, useColorScheme } from '../../theme/ThemeContext';
 import {
   PAYMENT_METHODS,
   MainCategory,
@@ -62,6 +62,7 @@ export default function TransactionForm({
   type,
 }: Props) {
   const theme = useTheme();
+  const { isDark } = useColorScheme();
   const isEdit = mode === 'edit';
   const isExpense = type === 'expense';
 
@@ -110,7 +111,11 @@ export default function TransactionForm({
           paddingVertical: theme.spacing.sm,
           fontSize: theme.typography.body.fontSize,
           color: theme.colors.text,
-          backgroundColor: theme.colors.background,
+          backgroundColor: theme.colors.surface,
+        },
+        dateInputText: {
+          color: theme.colors.text,
+          fontSize: theme.typography.body.fontSize,
         },
         inputWrapper: { position: 'relative' },
         inputWithClear: { paddingRight: theme.spacing.lg },
@@ -476,7 +481,7 @@ export default function TransactionForm({
             setShowDatePicker(true);
           }}
         >
-          <Text>{dateText}</Text>
+          <Text style={styles.dateInputText}>{dateText}</Text>
         </Pressable>
 
         {showDatePicker && (
@@ -487,6 +492,8 @@ export default function TransactionForm({
               locale="ko-KR"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={handleDateChange}
+              themeVariant={isDark ? 'dark' : 'light'}
+              textColor={theme.colors.text}
             />
             <View style={styles.datePickerButtons}>
               <Pressable
@@ -516,6 +523,7 @@ export default function TransactionForm({
             onChangeText={handleAmountChange}
             keyboardType="numeric"
             placeholder="0"
+            placeholderTextColor={theme.colors.textMuted}
           />
           {amountText.length > 0 && (
             <Pressable
@@ -581,6 +589,7 @@ export default function TransactionForm({
             value={subCategory}
             onChangeText={setSubCategory}
             placeholder="예: 마트, 편의점, 통신비"
+            placeholderTextColor={theme.colors.textMuted}
           />
           {subCategory.length > 0 && (
             <Pressable style={styles.clearButton} onPress={() => setSubCategory('')} hitSlop={8}>
@@ -614,6 +623,7 @@ export default function TransactionForm({
             value={memo}
             onChangeText={setMemo}
             placeholder="내용을 입력하세요"
+            placeholderTextColor={theme.colors.textMuted}
             multiline
           />
           {memo.length > 0 && (
@@ -661,6 +671,7 @@ export default function TransactionForm({
               value={newCategory}
               onChangeText={setNewCategory}
               placeholder="새 대분류 입력"
+              placeholderTextColor={theme.colors.textMuted}
             />
             <View style={styles.buttonRow}>
               <Pressable

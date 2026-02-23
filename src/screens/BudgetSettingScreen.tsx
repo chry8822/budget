@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import ScreenContainer from '../components/common/ScreenContainer';
 import ScreenHeader from '../components/common/ScreenHeader';
+import { useTransactionChange } from '../components/common/TransactionChangeContext';
 import { useTheme } from '../theme/ThemeContext';
 import { deleteBudget, getBudgetsOfMonth, upsertBudget } from '../db/database';
 import { EXPENSE_MAIN_CATEGORIES, MAIN_CATEGORIES } from '../types/transaction';
@@ -31,6 +32,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'BudgetSetting'>;
 
 export default function BudgetSettingScreen({ route }: Props) {
   const theme = useTheme();
+  const { notifyChanged } = useTransactionChange();
   const now = new Date();
   const year = route.params?.year ?? now.getFullYear();
   const month = route.params?.month ?? now.getMonth() + 1;
@@ -316,6 +318,7 @@ export default function BudgetSettingScreen({ route }: Props) {
 
       // 4) 저장 후 다시 로드
       await loadBudgets();
+      notifyChanged(); // 요약/예산 탭이 같은 달 데이터 다시 불러오도록
       Vibration.vibrate();
       // 5) 성공 토스트
       Toast.show({
@@ -364,6 +367,7 @@ export default function BudgetSettingScreen({ route }: Props) {
                 value={Number(totalBudget) > 0 ? Number(totalBudget).toLocaleString() : ''}
                 onChangeText={(text) => setTotalBudget(text.replace(/[^0-9]/g, ''))}
                 placeholder="예: 1500000"
+                placeholderTextColor={theme.colors.textMuted}
               />
               <Text style={styles.inputSuffix}>원</Text>
             </View>
@@ -387,6 +391,7 @@ export default function BudgetSettingScreen({ route }: Props) {
                     }
                     onChangeText={(text) => handleChangeCategoryBudget(cat, text)}
                     placeholder="-"
+                    placeholderTextColor={theme.colors.textMuted}
                   />
                   <Text style={styles.inputSuffix}>원</Text>
                 </View>

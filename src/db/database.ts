@@ -262,6 +262,19 @@ export async function deleteTransactionById(id: number): Promise<void> {
 }
 
 /**
+ * 전체 데이터 초기화 (거래 내역 + 예산 전부 삭제, 카테고리는 유지)
+ */
+export async function clearAllData(): Promise<void> {
+  try {
+    await db.runAsync('DELETE FROM transactions;');
+    await db.runAsync('DELETE FROM budgets;');
+  } catch (error) {
+    console.error('clearAllData 에러', error);
+    throw error;
+  }
+}
+
+/**
  * 거래 내역 단건 조회
  * @param id - 조회할 거래 ID
  * @returns Transaction 또는 null (없을 경우)
