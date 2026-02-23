@@ -3,7 +3,7 @@
  * - + 버튼 클릭 시 위로 미니 버튼들이 펼쳐짐
  * - 아이콘 + 라벨 원형 버튼 스타일
  */
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,8 +28,19 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const openRef = useRef(open);
   openRef.current = open;
+
+  // 닫힌 후 애니메이션 완료 시점에 미니 버튼 언마운트
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+    } else {
+      const timer = setTimeout(() => setMounted(false), 250);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
   const anim = useRef(new Animated.Value(0)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -194,9 +205,9 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
     <>
       {open && <Pressable style={styles.overlay} onPress={close} />}
 
-      <Animated.View style={containerStyle} pointerEvents="box-none">
+      <Animated.View style={containerStyle} pointerEvents="box-none" collapsable={false}>
         {/* 미니 액션 버튼들 */}
-        {actions.map((action, index) => {
+        {mounted && actions.map((action, index) => {
           const translateY = anim.interpolate({
             inputRange: [0, 1],
             outputRange: [0, -(64 + index * 60)],

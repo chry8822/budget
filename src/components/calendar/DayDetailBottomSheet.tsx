@@ -55,16 +55,18 @@ export default function DayDetailBottomSheet({
   useEffect(() => {
     if (visible) {
       translateY.setValue(SCREEN_HEIGHT);
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 220,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
+      requestAnimationFrame(() => {
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 280,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }).start();
+      });
     } else {
       Animated.timing(translateY, {
         toValue: SCREEN_HEIGHT,
-        duration: 150,
+        duration: 180,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }).start();

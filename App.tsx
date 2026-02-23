@@ -46,9 +46,9 @@ function MainTabs() {
         tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarStyle: {
           backgroundColor: theme.colors.tabBarBackground ?? theme.colors.background,
-          height: 60 + insets.bottom,
+          height: 70 + insets.bottom,
           paddingTop: 10,
-          paddingBottom: insets.bottom + 10,
+          // paddingBottom: insets.bottom ,
         },
         tabBarButton: (props) => (
           <HapticWrapper

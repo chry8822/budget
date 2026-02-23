@@ -424,7 +424,6 @@ export default function CalendarSection({
         <Calendar
           key={`calendar-${colorScheme}`}
           hideExtraDays
-          enableSwipeMonths
           initialDate={initialMonth}
           monthFormat={'yyyy년 M월'}
           onMonthChange={(date: DayData) => {
