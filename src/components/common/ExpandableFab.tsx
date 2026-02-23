@@ -81,18 +81,20 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
           position: 'absolute',
           flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'flex-end',
           right: 0,
           zIndex: 11,
+          minHeight: 46,
         },
         miniLabel: {
           marginRight: 12,
           fontSize: theme.typography.sizes.xs,
           color: theme.colors.text,
           fontWeight: '600',
-          backgroundColor: theme.colors.background,
+          backgroundColor: theme.colors.surface,
           paddingHorizontal: 10,
-          paddingVertical: 4,
-          borderRadius: 6,
+          paddingVertical: 6,
+          borderRadius: 8,
           overflow: 'hidden',
           elevation: 2,
           shadowColor: '#000',
@@ -114,7 +116,7 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
         },
         miniButtonText: {
           fontSize: theme.typography.sizes.md,
-          color: theme.colors.background,
+          color: theme.colors.onPrimary ?? '#FFFFFF',
           fontWeight: '600',
         },
       }),
@@ -247,7 +249,7 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
                   styles.miniLabel,
                   {
                     backgroundColor: theme.colors.primary,
-                    color: theme.colors.surface,
+                    color: theme.colors.onPrimary ?? '#FFFFFF',
                     opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
                     transform: [
                       {

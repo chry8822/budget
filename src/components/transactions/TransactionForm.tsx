@@ -38,7 +38,10 @@ import {
   insertTransaction,
   updateTransaction,
 } from '../../db/database';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker, {
+  DateTimePickerAndroid,
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useTransactionChange } from '../common/TransactionChangeContext';
@@ -423,11 +426,9 @@ export default function TransactionForm({
 
   const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
-      // 사용자가 취소(뒤로가기 등) 했을 때만 닫기
       setShowDatePicker(false);
       return;
     }
-
     const currentDate = selectedDate ?? tempDate;
     setTempDate(currentDate);
   };
@@ -477,20 +478,33 @@ export default function TransactionForm({
         <Pressable
           style={styles.input}
           onPress={() => {
-            setTempDate(date); // 현재 확정값을 기준으로 피커를 열고
-            setShowDatePicker(true);
+            if (Platform.OS === 'android') {
+              DateTimePickerAndroid.open({
+                value: date,
+                mode: 'date',
+                display: 'spinner',
+                onChange: (event, selectedDate) => {
+                  if (event.type === 'set' && selectedDate) {
+                    setDate(selectedDate);
+                  }
+                },
+              });
+            } else {
+              setTempDate(date);
+              setShowDatePicker(true);
+            }
           }}
         >
           <Text style={styles.dateInputText}>{dateText}</Text>
         </Pressable>
 
-        {showDatePicker && (
+        {showDatePicker && Platform.OS === 'ios' && (
           <View style={styles.datePickerContainer}>
             <DateTimePicker
               value={tempDate}
               mode="date"
               locale="ko-KR"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              display="spinner"
               onChange={handleDateChange}
               themeVariant={isDark ? 'dark' : 'light'}
               textColor={theme.colors.text}
@@ -505,7 +519,7 @@ export default function TransactionForm({
               <Pressable
                 style={[styles.dateButton, styles.dateOkButton]}
                 onPress={() => {
-                  setDate(tempDate); // 여기서만 확정
+                  setDate(tempDate);
                   setShowDatePicker(false);
                 }}
               >
