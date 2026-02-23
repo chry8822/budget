@@ -3,7 +3,7 @@
  * - 월간 달력 + 일별 수입/지출 표시
  * - 날짜 선택 시 바텀시트로 해당 날짜 내역 + 추가 버튼
  */
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -270,6 +270,7 @@ export default function CalendarSection({
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTransactions, setSelectedTransactions] = useState<Transaction[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const pendingDateRef = useRef<string | null>(null);
 
   const [displayYear, setDisplayYear] = useState(year);
   const [displayMonth, setDisplayMonth] = useState(month);
@@ -340,25 +341,32 @@ export default function CalendarSection({
     return marks;
   }, [displayDailySummary, selectedDate, theme]);
 
-  // 2) 선택 날짜 변경 시 상세 내역 로드
+  // 2) 선택 날짜 변경 시 — 팝업 애니메이션 완료 후 데이터 로드
   useEffect(() => {
     if (!selectedDate) {
       setSelectedTransactions([]);
-      return;
+      setLoadingDetail(false);
+      pendingDateRef.current = null;
+    } else {
+      pendingDateRef.current = selectedDate;
+      setLoadingDetail(true);
     }
+  }, [selectedDate]);
 
-    const load = async () => {
-      try {
-        setLoadingDetail(true);
-        const rows = await getTransactionsByDate(selectedDate);
+  const loadTransactions = useCallback(async () => {
+    const date = pendingDateRef.current;
+    if (!date) return;
+    try {
+      const rows = await getTransactionsByDate(date);
+      if (pendingDateRef.current === date) {
         setSelectedTransactions(rows);
-      } finally {
+      }
+    } finally {
+      if (pendingDateRef.current === date) {
         setLoadingDetail(false);
       }
-    };
-
-    load();
-  }, [selectedDate]);
+    }
+  }, []);
 
   const summaryMap = useMemo(() => {
     const map: Record<string, DailySummaryRow> = {};
@@ -537,6 +545,7 @@ export default function CalendarSection({
         transactions={selectedTransactions}
         loading={loadingDetail}
         onClose={() => setSelectedDate(null)}
+        onAnimationComplete={loadTransactions}
         onAddExpense={() => {
           if (!selectedDate) return;
           navigation.navigate('AddTransaction', { mode: 'expense', initialDate: selectedDate });

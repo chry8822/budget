@@ -4,7 +4,7 @@
  * - 위로 슬라이드 업 / 아래로 슬라이드 다운
  * - 상단 핸들 드래그로 내려서 닫기
  */
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useCallback, useRef, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -37,6 +37,7 @@ type Props = {
   onAddExpense: () => void;
   onAddIncome: () => void;
   onTransactionPress?: (id: number) => void;
+  onAnimationComplete?: () => void;
 };
 
 export default function DayDetailBottomSheet({
@@ -48,30 +49,22 @@ export default function DayDetailBottomSheet({
   onAddExpense,
   onAddIncome,
   onTransactionPress,
+  onAnimationComplete,
 }: Props) {
   const theme = useTheme();
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
-  useEffect(() => {
-    if (visible) {
-      translateY.setValue(SCREEN_HEIGHT);
-      requestAnimationFrame(() => {
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: 280,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }).start();
-      });
-    } else {
-      Animated.timing(translateY, {
-        toValue: SCREEN_HEIGHT,
-        duration: 180,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [visible, translateY]);
+  const handleShow = useCallback(() => {
+    translateY.setValue(SCREEN_HEIGHT);
+    Animated.timing(translateY, {
+      toValue: 0,
+      duration: 260,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) onAnimationComplete?.();
+    });
+  }, [translateY, onAnimationComplete]);
 
   const styles = useMemo(
     () =>
@@ -240,6 +233,7 @@ export default function DayDetailBottomSheet({
       visible={visible}
       animationType="none"
       onRequestClose={closeWithSlideDown}
+      onShow={handleShow}
       statusBarTranslucent
     >
       <View style={styles.backdrop}>
