@@ -47,7 +47,7 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: theme.colors.tabBarBackground ?? theme.colors.background,
           height: 70 + insets.bottom,
-          paddingTop: 10,
+          paddingTop: 5,
           // paddingBottom: insets.bottom ,
         },
         tabBarButton: (props) => (
@@ -84,8 +84,6 @@ function MainTabs() {
                 color,
                 fontSize: theme.typography.sizes.md,
                 fontWeight: 'bold',
-                marginTop: 10,
-                marginBottom: 2,
               }}
             >
               {label}

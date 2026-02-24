@@ -53,18 +53,49 @@ export default function DayDetailBottomSheet({
 }: Props) {
   const theme = useTheme();
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
 
   const handleShow = useCallback(() => {
     translateY.setValue(SCREEN_HEIGHT);
-    Animated.timing(translateY, {
-      toValue: 0,
-      duration: 260,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start(({ finished }) => {
+    backdropOpacity.setValue(0);
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 320,
+        easing: Easing.bezier(0.33, 1, 0.68, 1),
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
       if (finished) onAnimationComplete?.();
     });
-  }, [translateY, onAnimationComplete]);
+  }, [translateY, backdropOpacity, onAnimationComplete]);
+
+  const closeWithSlideDown = useCallback(() => {
+    translateY.stopAnimation();
+    backdropOpacity.stopAnimation();
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 180,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: SCREEN_HEIGHT,
+        duration: 220,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) onClose();
+    });
+  }, [translateY, backdropOpacity, onClose]);
 
   const styles = useMemo(
     () =>
@@ -196,12 +227,7 @@ export default function DayDetailBottomSheet({
         },
         onPanResponderRelease: (_, { dy, vy }) => {
           if (dy > DRAG_CLOSE_THRESHOLD || vy > 0.3) {
-            Animated.timing(translateY, {
-              toValue: SCREEN_HEIGHT,
-              duration: 200,
-              easing: Easing.out(Easing.ease),
-              useNativeDriver: true,
-            }).start(() => onClose());
+            closeWithSlideDown();
           } else {
             Animated.spring(translateY, {
               toValue: 0,
@@ -212,18 +238,8 @@ export default function DayDetailBottomSheet({
           }
         },
       }),
-    [translateY, onClose],
+    [translateY, closeWithSlideDown],
   );
-
-  const closeWithSlideDown = () => {
-    translateY.stopAnimation();
-    Animated.timing(translateY, {
-      toValue: SCREEN_HEIGHT,
-      duration: 150,
-      easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    }).start(() => onClose());
-  };
 
   if (!selectedDate) return null;
 
@@ -236,7 +252,7 @@ export default function DayDetailBottomSheet({
       onShow={handleShow}
       statusBarTranslucent
     >
-      <View style={styles.backdrop}>
+      <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           onPress={closeWithSlideDown}
@@ -318,7 +334,7 @@ export default function DayDetailBottomSheet({
             </TouchableOpacity>
           </View>
         </Animated.View>
-      </View>
+      </Animated.View>
     </Modal>
   );
 }

@@ -2,7 +2,7 @@
   "expo": {
     "name": "한눈쏙 가계부",
     "slug": "hanunssok-budget",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "한눈에 쏙 들어오는 가계부 - 수입/지출 기록, 예산 관리, 월별 통계",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -25,6 +25,10 @@
       "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false,
       "package": "com.chrys.hanunssok"
+    },
+    "androidNavigationBar": {
+      "backgroundColor": "#FFFFFF",
+      "barStyle": "dark-content"
     },
     "web": {
       "favicon": "./assets/favicon.png"

@@ -8,7 +8,7 @@ import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../theme/ThemeContext';
+import { useTheme, useColorScheme } from '../../theme/ThemeContext';
 import AnimatedButton from './AnimatedButton';
 
 export type FabAction = {
@@ -26,6 +26,7 @@ type Props = {
 
 export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Props) {
   const theme = useTheme();
+  const { isDark } = useColorScheme();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -81,11 +82,15 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
           backgroundColor: theme.colors.background,
           alignItems: 'center',
           justifyContent: 'center',
-          elevation: 4,
+          elevation: 10,
           shadowColor: theme.colors.textMuted,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.3,
-          shadowRadius: 5,
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.8,
+          shadowRadius: 1,
+          ...(isDark && {
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.25)',
+          }),
         },
         fabInner: {},
         miniRow: {
@@ -131,7 +136,7 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
           fontWeight: '600',
         },
       }),
-    [theme],
+    [theme, isDark],
   );
 
   // 탭 포커스될 때마다 5초간 좌우 흔들림 애니메이션 / 탭 이동 시 FAB 펼침 상태 초기화
@@ -207,35 +212,36 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
 
       <Animated.View style={containerStyle} pointerEvents="box-none" collapsable={false}>
         {/* 미니 액션 버튼들 */}
-        {mounted && actions.map((action, index) => {
-          const translateY = anim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, -(64 + index * 60)],
-          });
+        {mounted &&
+          actions.map((action, index) => {
+            const translateY = anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, -(64 + index * 60)],
+            });
 
-          return (
-            <Animated.View
-              key={action.label}
-              style={[
-                styles.miniRow,
-                {
-                  opacity: anim,
-                  transform: [{ translateY }, { scale: anim }],
-                },
-              ]}
-            >
-              <Pressable
-                style={[styles.miniButton, { backgroundColor: action.color }]}
-                onPress={() => {
-                  action.onPress();
-                  close();
-                }}
+            return (
+              <Animated.View
+                key={action.label}
+                style={[
+                  styles.miniRow,
+                  {
+                    opacity: anim,
+                    transform: [{ translateY }, { scale: anim }],
+                  },
+                ]}
               >
-                <Text style={styles.miniButtonText}>{action.label}</Text>
-              </Pressable>
-            </Animated.View>
-          );
-        })}
+                <Pressable
+                  style={[styles.miniButton, { backgroundColor: action.color }]}
+                  onPress={() => {
+                    action.onPress();
+                    close();
+                  }}
+                >
+                  <Text style={styles.miniButtonText}>{action.label}</Text>
+                </Pressable>
+              </Animated.View>
+            );
+          })}
 
         {/* 메인 FAB + "추가" 라벨 */}
         <View style={styles.fabRow}>
@@ -298,4 +304,3 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
     </>
   );
 }
-
