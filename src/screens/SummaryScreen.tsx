@@ -719,12 +719,6 @@ export default function SummaryScreen() {
                               {formatWon(remainingTotal)}
                             </Text>
                           </View>
-                          <Pressable
-                            onPress={() => navigation.navigate('BudgetSetting', { year, month })}
-                            style={styles.budgetButton}
-                          >
-                            <Text style={styles.budgetLink}>예산설정</Text>
-                          </Pressable>
                         </View>
                       ) : (
                         <View

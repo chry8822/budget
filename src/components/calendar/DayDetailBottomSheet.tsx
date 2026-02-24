@@ -26,6 +26,9 @@ import { formatWon } from '../../utils/format';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SHEET_HEIGHT = Math.max(SCREEN_HEIGHT * 0.55, 400);
+// 핸들+제목+버튼행 실제 합에 맞춰 여백 최소화 (200이면 아래 공백 큼)
+const SHEET_OVERHEAD = 180;
+const LIST_AREA_HEIGHT = SHEET_HEIGHT - SHEET_OVERHEAD;
 const DRAG_CLOSE_THRESHOLD = 80;
 
 type Props = {
@@ -100,10 +103,20 @@ export default function DayDetailBottomSheet({
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        backdrop: {
+        container: {
           flex: 1,
           justifyContent: 'flex-end',
+        },
+        backdropDim: {
+          ...StyleSheet.absoluteFillObject,
           backgroundColor: 'rgba(0,0,0,0.45)',
+        },
+        backdropTouchArea: {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: SHEET_HEIGHT,
         },
         sheet: {
           width: '100%',
@@ -123,7 +136,7 @@ export default function DayDetailBottomSheet({
           height: 4,
           borderRadius: 2,
           backgroundColor: theme.colors.border,
-          marginTop: theme.spacing.xs,
+          marginTop: theme.spacing.md,
         },
         title: {
           fontSize: theme.typography.sizes.lg,
@@ -133,17 +146,22 @@ export default function DayDetailBottomSheet({
           marginBottom: theme.spacing.md,
           marginTop: theme.spacing.md,
         },
+        contentArea: {
+          height: LIST_AREA_HEIGHT,
+          minHeight: LIST_AREA_HEIGHT,
+        },
         loadingWrap: {
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          minHeight: 120,
         },
         listWrap: {
           flex: 1,
-          maxHeight: SHEET_HEIGHT - 200,
+          minHeight: LIST_AREA_HEIGHT,
         },
         listContent: {
+          flexGrow: 1,
+          minHeight: LIST_AREA_HEIGHT,
           paddingHorizontal: theme.spacing.md,
           paddingBottom: theme.spacing.lg,
         },
@@ -151,7 +169,7 @@ export default function DayDetailBottomSheet({
           ...theme.typography.body,
           color: theme.colors.textMuted,
           textAlign: 'center',
-          marginTop: theme.spacing.lg,
+          marginTop: theme.spacing.md,
         },
         txRow: {
           flexDirection: 'row',
@@ -252,90 +270,83 @@ export default function DayDetailBottomSheet({
       onShow={handleShow}
       statusBarTranslucent
     >
-      <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
+      <View style={styles.container}>
+        <Animated.View style={[styles.backdropDim, { opacity: backdropOpacity }]} />
         <TouchableOpacity
-          style={StyleSheet.absoluteFill}
+          style={styles.backdropTouchArea}
           onPress={closeWithSlideDown}
           activeOpacity={1}
         />
-
-        <Animated.View style={[styles.sheet, { height: SHEET_HEIGHT, transform: [{ translateY }] }]}>
+        <Animated.View
+          style={[styles.sheet, { height: SHEET_HEIGHT, transform: [{ translateY }] }]}
+        >
           <View style={styles.handleArea} {...panResponder.panHandlers}>
             <View style={styles.handle} />
           </View>
           <Text style={styles.title}>{selectedDate} 내역</Text>
 
-          {loading ? (
-            <View style={styles.loadingWrap}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
-
-            </View>
-          ) : (
-            <ScrollView
-              style={styles.listWrap}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-            >
-              {transactions.length === 0 ? (
-                <Text style={styles.emptyText}>이 날에는 내역이 없어요.</Text>
-              ) : (
-                transactions.map((tx) => {
-                  const isExpense = tx.type === 'expense';
-                  return (
-                    <Pressable
-                      key={tx.id ?? tx.date + tx.mainCategory + tx.amount}
-                      style={styles.txRow}
-                      onPress={() => tx.id && onTransactionPress?.(tx.id)}
-                    >
-                      <View style={styles.txLeft}>
-                        <Text style={styles.txCategory}>{tx.mainCategory}</Text>
-                        {tx.memo ? (
-                          <Text style={styles.txMemo} numberOfLines={1}>
-                            {tx.memo}
+          <View style={styles.contentArea}>
+            {loading ? (
+              <View style={styles.loadingWrap}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+              </View>
+            ) : (
+              <ScrollView
+                style={styles.listWrap}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {transactions.length === 0 ? (
+                  <Text style={styles.emptyText}>이 날에는 내역이 없어요.</Text>
+                ) : (
+                  transactions.map((tx) => {
+                    const isExpense = tx.type === 'expense';
+                    return (
+                      <Pressable
+                        key={tx.id ?? tx.date + tx.mainCategory + tx.amount}
+                        style={styles.txRow}
+                        onPress={() => tx.id && onTransactionPress?.(tx.id)}
+                      >
+                        <View style={styles.txLeft}>
+                          <Text style={styles.txCategory}>{tx.mainCategory}</Text>
+                          {tx.memo ? (
+                            <Text style={styles.txMemo} numberOfLines={1}>
+                              {tx.memo}
+                            </Text>
+                          ) : null}
+                        </View>
+                        <View style={styles.txRight}>
+                          <Text
+                            style={[styles.txAmount, { color: isExpense ? '#e53935' : '#1e88e5' }]}
+                          >
+                            {isExpense ? '-' : '+'}
+                            {formatWon(Math.abs(tx.amount))}
                           </Text>
-                        ) : null}
-                      </View>
-                      <View style={styles.txRight}>
-                        <Text
-                          style={[
-                            styles.txAmount,
-                            { color: isExpense ? '#e53935' : '#1e88e5' },
-                          ]}
-                        >
-                          {isExpense ? '-' : '+'}
-                          {formatWon(Math.abs(tx.amount))}
-                        </Text>
-                        {tx.createdAt ? (
-                          <Text style={styles.txTime}>{tx.createdAt.slice(11, 16)}</Text>
-                        ) : null}
-                      </View>
-                    </Pressable>
-                  );
-                })
-              )}
-            </ScrollView>
-          )}
+                          {tx.createdAt ? (
+                            <Text style={styles.txTime}>{tx.createdAt.slice(11, 16)}</Text>
+                          ) : null}
+                        </View>
+                      </Pressable>
+                    );
+                  })
+                )}
+              </ScrollView>
+            )}
+          </View>
 
           {/* 추가 버튼 영역 - 메인 FAB와 동일한 지출/수입 버튼 */}
           <View style={styles.addRow}>
-            <TouchableOpacity
-              style={[styles.addButton]}
-              onPress={onAddIncome}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.addButtonText, { color: theme.colors.income ?? '#1e88e5' }]}>수입</Text>
+            <TouchableOpacity style={[styles.addButton]} onPress={onAddIncome} activeOpacity={0.8}>
+              <Text style={[styles.addButtonText, { color: theme.colors.income ?? '#1e88e5' }]}>
+                수입
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.addButton]}
-              onPress={onAddExpense}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={[styles.addButton]} onPress={onAddExpense} activeOpacity={0.8}>
               <Text style={[styles.addButtonText, { color: theme.colors.primary }]}>지출</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
-      </Animated.View>
+      </View>
     </Modal>
   );
 }
-

@@ -11,8 +11,10 @@ import {
   TextInput,
   Animated,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   Vibration,
   Platform,
+  Keyboard,
 } from 'react-native';
 import ScreenContainer from '../components/common/ScreenContainer';
 import ScreenHeader from '../components/common/ScreenHeader';
@@ -40,6 +42,7 @@ export default function BudgetSettingScreen({ route }: Props) {
   const [loading, setLoading] = useState(false);
   const [totalBudget, setTotalBudget] = useState<string>(''); // 문자열로 관리
   const [categoryBudgets, setCategoryBudgets] = useState<Record<string, string>>({}); // 카테고리별 금액
+  const [focusedInput, setFocusedInput] = useState<'total' | string | null>(null);
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
@@ -88,6 +91,7 @@ export default function BudgetSettingScreen({ route }: Props) {
           paddingVertical: 4,
           fontSize: theme.typography.sizes.md,
           color: theme.colors.text,
+          ...(Platform.OS === 'android' && { minHeight: 28 }),
         },
         inputSuffix: {
           marginLeft: theme.spacing.xs,
@@ -119,6 +123,7 @@ export default function BudgetSettingScreen({ route }: Props) {
           paddingVertical: 2,
           fontSize: theme.typography.sizes.sm,
           color: theme.colors.text,
+          ...(Platform.OS === 'android' && { minHeight: 24 }),
         },
         saveButton: {
           marginTop: theme.spacing.sm,
@@ -336,12 +341,20 @@ export default function BudgetSettingScreen({ route }: Props) {
     <ScreenContainer safeBottom>
       <KeyboardAwareScrollView
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        onScrollBeginDrag={Keyboard.dismiss}
         nestedScrollEnabled={true}
         enableOnAndroid={true}
-        enableAutomaticScroll={Platform.OS === 'ios'}
+        enableAutomaticScroll={true}
         enableResetScrollToCoords={false}
+        extraScrollHeight={Platform.OS === 'android' ? 24 : 0}
+        extraHeight={Platform.OS === 'android' ? 16 : 0}
+        keyboardOpeningTime={0}
+        scrollEnabled={true}
+        bounces={false}
       >
-        <Animated.View style={[styles.shakeWrap, { transform: [{ translateX: shakeAnim }] }]}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <Animated.View style={[styles.shakeWrap, { transform: [{ translateX: shakeAnim }] }]}>
           <ScreenHeader title="예산 설정" />
           <View style={styles.subtitleRow}>
             <Text style={styles.subtitle}>
@@ -362,12 +375,23 @@ export default function BudgetSettingScreen({ route }: Props) {
             <Text style={styles.cardTitle}>이번 달 전체 예산</Text>
             <View style={styles.inputRow}>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  focusedInput === 'total' && {
+                    borderBottomColor: theme.colors.primary,
+                    borderBottomWidth: 2,
+                  },
+                ]}
                 keyboardType="number-pad"
                 value={Number(totalBudget) > 0 ? Number(totalBudget).toLocaleString() : ''}
                 onChangeText={(text) => setTotalBudget(text.replace(/[^0-9]/g, ''))}
                 placeholder="예: 1500000"
                 placeholderTextColor={theme.colors.textMuted}
+                selectionColor={theme.colors.primary}
+                cursorColor={theme.colors.primary}
+                underlineColorAndroid="transparent"
+                onFocus={() => setFocusedInput('total')}
+                onBlur={() => setFocusedInput(null)}
               />
               <Text style={styles.inputSuffix}>원</Text>
             </View>
@@ -382,7 +406,13 @@ export default function BudgetSettingScreen({ route }: Props) {
                 <Text style={styles.categoryLabel}>{cat}</Text>
                 <View style={styles.categoryInputRow} pointerEvents="box-none">
                   <TextInput
-                    style={styles.categoryInput}
+                    style={[
+                      styles.categoryInput,
+                      focusedInput === cat && {
+                        borderBottomColor: theme.colors.primary,
+                        borderBottomWidth: 2,
+                      },
+                    ]}
                     keyboardType="number-pad"
                     value={
                       Number(categoryBudgets[cat]) > 0
@@ -392,6 +422,11 @@ export default function BudgetSettingScreen({ route }: Props) {
                     onChangeText={(text) => handleChangeCategoryBudget(cat, text)}
                     placeholder="-"
                     placeholderTextColor={theme.colors.textMuted}
+                    selectionColor={theme.colors.primary}
+                    cursorColor={theme.colors.primary}
+                    underlineColorAndroid="transparent"
+                    onFocus={() => setFocusedInput(cat)}
+                    onBlur={() => setFocusedInput(null)}
                   />
                   <Text style={styles.inputSuffix}>원</Text>
                 </View>
@@ -421,7 +456,8 @@ export default function BudgetSettingScreen({ route }: Props) {
               </Text>
             </View>
           </View>
-        </Animated.View>
+          </Animated.View>
+        </TouchableWithoutFeedback>
       </KeyboardAwareScrollView>
       <TouchableOpacity
         style={[styles.saveButton, loading && styles.saveButtonDisabled]}
