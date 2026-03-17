@@ -10,6 +10,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 
+/** 프로덕션 Modal에서 insets.bottom이 0일 수 있음. 최소 하단 여백 */
+const MIN_BOTTOM_INSET = 40;
+
 type Props = {
   visible: boolean;
   onClose: () => void;
@@ -41,7 +44,7 @@ export default function MonthPickerBottomSheet({
         backdropTouchable: { flex: 1 },
         sheet: {
           paddingTop: theme.spacing.lg,
-          paddingBottom: theme.spacing.lg + insets.bottom,
+          paddingBottom: theme.spacing.lg + Math.max(insets.bottom, MIN_BOTTOM_INSET),
           paddingHorizontal: theme.spacing.lg,
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
@@ -121,7 +124,7 @@ export default function MonthPickerBottomSheet({
           fontWeight: 'bold',
         },
       }),
-    [theme, insets.bottom],
+    [theme, insets.bottom, MIN_BOTTOM_INSET],
   );
 
   const translateY = useRef(new Animated.Value(300)).current;

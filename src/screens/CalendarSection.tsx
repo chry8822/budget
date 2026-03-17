@@ -18,8 +18,6 @@ import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import { useColorScheme, useTheme } from '../theme/ThemeContext';
 import {
   DailySummaryRow,
-  Transaction,
-  getTransactionsByDate,
   getMonthlySummary,
   getDailySummaryOfMonth,
 } from '../db/database';
@@ -28,7 +26,6 @@ import { DayProps } from 'react-native-calendars/src/calendar/day';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
-import DayDetailBottomSheet from '../components/calendar/DayDetailBottomSheet';
 import MonthPickerBottomSheet from '../components/summary/MonthPickerBottomSheet';
 
 LocaleConfig.locales['ko'] = {
@@ -246,6 +243,8 @@ type Props = {
   totalIncome: number;
   totalExpense: number;
   navigation: NativeStackNavigationProp<RootStackParamList>;
+  selectedDate: string | null;
+  onDayPress: (dateString: string) => void;
 };
 
 type DayData = {
@@ -263,14 +262,12 @@ export default function CalendarSection({
   totalIncome,
   totalExpense,
   navigation,
+  selectedDate,
+  onDayPress,
 }: Props) {
   const theme = useTheme();
   const { colorScheme } = useColorScheme();
   const styles = useMemo(() => createCalendarStyles(theme), [theme]);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedTransactions, setSelectedTransactions] = useState<Transaction[]>([]);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const pendingDateRef = useRef<string | null>(null);
 
   const [displayYear, setDisplayYear] = useState(year);
   const [displayMonth, setDisplayMonth] = useState(month);
@@ -340,33 +337,6 @@ export default function CalendarSection({
 
     return marks;
   }, [displayDailySummary, selectedDate, theme]);
-
-  // 2) 선택 날짜 변경 시 — 팝업 애니메이션 완료 후 데이터 로드
-  useEffect(() => {
-    if (!selectedDate) {
-      setSelectedTransactions([]);
-      setLoadingDetail(false);
-      pendingDateRef.current = null;
-    } else {
-      pendingDateRef.current = selectedDate;
-      setLoadingDetail(true);
-    }
-  }, [selectedDate]);
-
-  const loadTransactions = useCallback(async () => {
-    const date = pendingDateRef.current;
-    if (!date) return;
-    try {
-      const rows = await getTransactionsByDate(date);
-      if (pendingDateRef.current === date) {
-        setSelectedTransactions(rows);
-      }
-    } finally {
-      if (pendingDateRef.current === date) {
-        setLoadingDetail(false);
-      }
-    }
-  }, []);
 
   const summaryMap = useMemo(() => {
     const map: Record<string, DailySummaryRow> = {};
@@ -441,7 +411,7 @@ export default function CalendarSection({
             setDisplayMonth(m);
             loadDisplayMonth(y, m);
           }}
-          onDayPress={(day: DayData) => setSelectedDate(day.dateString)}
+          onDayPress={(day: DayData) => onDayPress(day.dateString)}
           markingType="custom"
           markedDates={markedDates}
           customHeader={() => (
@@ -510,7 +480,7 @@ export default function CalendarSection({
 
             const handleDayPress = () => {
               if (isDisabled) return;
-              setSelectedDate(key);
+              onDayPress(key);
               onPress?.(date);
             };
 
@@ -538,29 +508,6 @@ export default function CalendarSection({
           }}
         />
       </View>
-
-      <DayDetailBottomSheet
-        visible={!!selectedDate}
-        selectedDate={selectedDate}
-        transactions={selectedTransactions}
-        loading={loadingDetail}
-        onClose={() => setSelectedDate(null)}
-        onAnimationComplete={loadTransactions}
-        onAddExpense={() => {
-          if (!selectedDate) return;
-          navigation.navigate('AddTransaction', { mode: 'expense', initialDate: selectedDate });
-          setSelectedDate(null);
-        }}
-        onAddIncome={() => {
-          if (!selectedDate) return;
-          navigation.navigate('AddTransaction', { mode: 'income', initialDate: selectedDate });
-          setSelectedDate(null);
-        }}
-        onTransactionPress={(id) => {
-          setSelectedDate(null);
-          navigation.navigate('EditTransaction', { id });
-        }}
-      />
 
       <MonthPickerBottomSheet
         visible={monthPickerVisible}

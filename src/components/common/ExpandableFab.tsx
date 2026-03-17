@@ -8,6 +8,9 @@ import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+
+/** 프로덕션에서 insets가 0이면 FAB이 네비에 가릴 수 있음. 폴백 적용 */
+const MIN_BOTTOM_INSET = 40;
 import { useTheme, useColorScheme } from '../../theme/ThemeContext';
 import AnimatedButton from './AnimatedButton';
 
@@ -197,7 +200,7 @@ export default function ExpandableFab({ actions, fabOpacity, fabTranslateX }: Pr
 
   const containerStyle = [
     styles.container,
-    { bottom: theme.spacing.lg + insets.bottom },
+    { bottom: theme.spacing.lg + Math.max(insets.bottom, MIN_BOTTOM_INSET) },
     fabOpacity != null || fabTranslateX != null
       ? {
           opacity: fabOpacity ?? 1,

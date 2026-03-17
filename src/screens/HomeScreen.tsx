@@ -15,6 +15,7 @@ import {
   getTodayExpenseTotal,
   DailySummaryRow,
   getDailySummaryOfMonth,
+  getTransactionsByDate,
 } from '../db/database';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useCallback } from 'react';
@@ -28,6 +29,7 @@ import SummarySection from './SummarySection';
 import CalendarSection from './CalendarSection';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import OnboardingModal, { ONBOARDING_KEY } from '../components/common/OnboardingModal';
+import DayDetailBottomSheet from '../components/calendar/DayDetailBottomSheet';
 
 type Props = NativeStackScreenProps<RootStackParamList>;
 type HomeTab = 'calendar' | 'summary';
@@ -152,6 +154,29 @@ export default function HomeScreen({ navigation }: Props) {
   const scrollViewRef = useRef<ScrollView>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedTransactions, setSelectedTransactions] = useState<Transaction[]>([]);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  useEffect(() => {
+    if (!selectedDate) {
+      setSelectedTransactions([]);
+      setLoadingDetail(false);
+    } else {
+      setLoadingDetail(true);
+    }
+  }, [selectedDate]);
+
+  const loadDayTransactions = useCallback(async () => {
+    if (!selectedDate) return;
+    try {
+      const rows = await getTransactionsByDate(selectedDate);
+      setSelectedTransactions(rows);
+    } finally {
+      setLoadingDetail(false);
+    }
+  }, [selectedDate]);
+
   const totalIncome = summary?.totalIncome ?? 0;
   const totalExpense = summary?.totalExpense ?? 0;
   const topCategories = summary?.byCategory.slice(0, 3) ?? [];
@@ -248,7 +273,37 @@ export default function HomeScreen({ navigation }: Props) {
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      overlay={
+        selectedDate ? (
+          <DayDetailBottomSheet
+            visible
+            selectedDate={selectedDate}
+            transactions={selectedTransactions}
+            loading={loadingDetail}
+            onClose={() => setSelectedDate(null)}
+            onAnimationComplete={loadDayTransactions}
+            onAddExpense={() => {
+              if (!selectedDate) return;
+              const d = selectedDate;
+              setSelectedDate(null);
+              navigation.navigate('AddTransaction', { mode: 'expense', initialDate: d });
+            }}
+            onAddIncome={() => {
+              if (!selectedDate) return;
+              const d = selectedDate;
+              setSelectedDate(null);
+              navigation.navigate('AddTransaction', { mode: 'income', initialDate: d });
+            }}
+            onTransactionPress={(id) => {
+              setSelectedDate(null);
+              navigation.navigate('EditTransaction', { id });
+            }}
+          />
+        ) : null
+      }
+    >
+      <View style={{ flex: 1 }}>
       <ScrollView
         ref={scrollViewRef}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
@@ -258,15 +313,7 @@ export default function HomeScreen({ navigation }: Props) {
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingBottom: 24 }}
       >
-        <View style={styles.header}>
-          <View style={styles.headerIconWrap}>
-            <Image source={require('../../assets/icon.png')} style={styles.headerIcon} resizeMode="cover" />
-          </View>
-          <View>
-            <Text style={styles.headerTitle}>한눈쏙 가계부</Text>
-            <Text style={styles.headerSubtitle}>수입·지출을 한눈에</Text>
-          </View>
-        </View>
+       
 
         <View style={styles.homeTabBar}>
           <AnimatedButton
@@ -296,6 +343,8 @@ export default function HomeScreen({ navigation }: Props) {
             totalIncome={totalIncome}
             totalExpense={totalExpense}
             navigation={navigation}
+            selectedDate={selectedDate}
+            onDayPress={setSelectedDate}
           />
         ) : (
           <SummarySection
@@ -317,6 +366,7 @@ export default function HomeScreen({ navigation }: Props) {
       <ExpandableFab actions={fabActions} fabOpacity={fabOpacity} fabTranslateX={fabTranslateX} />
 
       <ScrollHint scrollRef={scrollViewRef} visible={isScrollable} opacity={scrollHintOpacity} />
+      </View>
 
       <OnboardingModal
         visible={showOnboarding}

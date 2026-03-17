@@ -14,7 +14,10 @@ import {
   ActivityIndicator,
   Vibration,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenContainer from '../components/common/ScreenContainer';
+
+const MIN_BOTTOM_INSET = 40;
 import ScreenHeader from '../components/common/ScreenHeader';
 import { useColorScheme } from '../theme/ThemeContext';
 import { useTransactionChange } from '../components/common/TransactionChangeContext';
@@ -24,6 +27,7 @@ import Toast from 'react-native-toast-message';
 export default function SettingsScreen() {
   const { theme, isDark, setColorScheme } = useColorScheme();
   const { notifyChanged } = useTransactionChange();
+  const insets = useSafeAreaInsets();
   const [resetModalVisible, setResetModalVisible] = useState(false);
   const [resetting, setResetting] = useState(false);
 
@@ -75,7 +79,9 @@ export default function SettingsScreen() {
           maxWidth: 340,
           backgroundColor: theme.colors.surface,
           borderRadius: 16,
-          padding: theme.spacing.lg,
+          paddingHorizontal: theme.spacing.lg,
+          paddingTop: theme.spacing.lg,
+          paddingBottom: theme.spacing.lg + Math.max(insets.bottom, MIN_BOTTOM_INSET),
           borderWidth: 1,
           borderColor: theme.colors.border,
         },
@@ -125,7 +131,7 @@ export default function SettingsScreen() {
           fontWeight: '600',
         },
       }),
-    [theme],
+    [theme, insets.bottom],
   );
 
   const handleResetPress = () => setResetModalVisible(true);

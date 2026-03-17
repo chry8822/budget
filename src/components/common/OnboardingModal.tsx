@@ -23,6 +23,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 
+/** 프로덕션 Modal에서 insets.bottom이 0일 수 있음. 최소 하단 여백 */
+const MIN_BOTTOM_INSET = 40;
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export const ONBOARDING_KEY = 'onboarding_shown';
@@ -96,7 +99,7 @@ export default function OnboardingModal({ visible, onClose, onSlideAction }: Pro
           borderRadius: 20,
           width: SCREEN_WIDTH - 48,
           paddingTop: 20,
-          paddingBottom: 20 + insets.bottom,
+          paddingBottom: 20 + Math.max(insets.bottom, MIN_BOTTOM_INSET),
           overflow: 'hidden',
         },
         closeButton: {
@@ -191,7 +194,7 @@ export default function OnboardingModal({ visible, onClose, onSlideAction }: Pro
           color: theme.colors.textMuted,
         },
       }),
-    [theme, insets.bottom],
+    [theme, insets.bottom, MIN_BOTTOM_INSET],
   );
 
   const isLastSlide = currentIndex === slides.length - 1;
@@ -313,7 +316,7 @@ export default function OnboardingModal({ visible, onClose, onSlideAction }: Pro
   const currentSlide = slides[currentIndex];
 
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.container}>
           {/* 우상단 닫기 */}

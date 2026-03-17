@@ -1,12 +1,10 @@
 /**
- * 날짜별 내역 바텀시트
- * - 캘린더에서 날짜 선택 시 화면 절반 이상 올라오는 바텀시트
- * - 위로 슬라이드 업 / 아래로 슬라이드 다운
- * - 상단 핸들 드래그로 내려서 닫기
+ * 날짜별 내역 바텀시트 (같은 창 오버레이)
+ * - Modal 대신 View 오버레이로 렌더 → useSafeAreaInsets()가 프로덕션에서도 정상 동작
+ * - 위로 슬라이드 업 / 아래로 슬라이드 다운, 상단 핸들 드래그로 닫기
  */
-import React, { useCallback, useRef, useMemo } from 'react';
+import React, { useCallback, useRef, useMemo, useEffect } from 'react';
 import {
-  Modal,
   View,
   Text,
   TouchableOpacity,
@@ -18,6 +16,7 @@ import {
   ScrollView,
   Pressable,
   PanResponder,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,7 +26,6 @@ import { formatWon } from '../../utils/format';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SHEET_HEIGHT = Math.max(SCREEN_HEIGHT * 0.55, 400);
-// 핸들+제목+버튼행 실제 합에 맞춰 여백 최소화 (200이면 아래 공백 큼)
 const SHEET_OVERHEAD = 180;
 const LIST_AREA_HEIGHT = SHEET_HEIGHT - SHEET_OVERHEAD;
 const DRAG_CLOSE_THRESHOLD = 80;
@@ -102,11 +100,26 @@ export default function DayDetailBottomSheet({
     });
   }, [translateY, backdropOpacity, onClose]);
 
+  useEffect(() => {
+    if (!visible) return;
+    handleShow();
+  }, [visible, handleShow]);
+
+  useEffect(() => {
+    if (!visible) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      closeWithSlideDown();
+      return true;
+    });
+    return () => sub.remove();
+  }, [visible, closeWithSlideDown]);
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        container: {
-          flex: 1,
+        overlay: {
+          ...StyleSheet.absoluteFillObject,
+          zIndex: 1000,
           justifyContent: 'flex-end',
         },
         backdropDim: {
@@ -126,6 +139,7 @@ export default function DayDetailBottomSheet({
           borderTopRightRadius: 24,
           backgroundColor: theme.colors.surface,
           overflow: 'hidden',
+          paddingBottom: insets.bottom,
         },
         handleArea: {
           paddingVertical: theme.spacing.sm,
@@ -232,7 +246,7 @@ export default function DayDetailBottomSheet({
           fontWeight: 'bold',
         },
       }),
-    [theme],
+    [theme, insets.bottom],
   );
 
   const panResponder = useMemo(
@@ -261,94 +275,85 @@ export default function DayDetailBottomSheet({
     [translateY, closeWithSlideDown],
   );
 
-  if (!selectedDate) return null;
+  if (!visible || !selectedDate) return null;
 
   return (
-    <Modal
-      transparent
-      visible={visible}
-      animationType="none"
-      onRequestClose={closeWithSlideDown}
-      onShow={handleShow}
-      statusBarTranslucent
-    >
-      <View style={styles.container}>
-        <Animated.View style={[styles.backdropDim, { opacity: backdropOpacity }]} />
-        <TouchableOpacity
-          style={styles.backdropTouchArea}
-          onPress={closeWithSlideDown}
-          activeOpacity={1}
-        />
-        <Animated.View
-          style={[styles.sheet, { height: SHEET_HEIGHT, transform: [{ translateY }] }]}
-        >
-          <View style={styles.handleArea} {...panResponder.panHandlers}>
-            <View style={styles.handle} />
-          </View>
-          <Text style={styles.title}>{selectedDate} 내역</Text>
+    <View style={styles.overlay} pointerEvents="box-none">
+      <Animated.View style={[styles.backdropDim, { opacity: backdropOpacity }]} pointerEvents="none" />
+      <TouchableOpacity
+        style={styles.backdropTouchArea}
+        onPress={closeWithSlideDown}
+        activeOpacity={1}
+      />
+      <Animated.View
+        style={[styles.sheet, { height: SHEET_HEIGHT, transform: [{ translateY }] }]}
+        pointerEvents="box-none"
+      >
+        <View style={styles.handleArea} {...panResponder.panHandlers}>
+          <View style={styles.handle} />
+        </View>
+        <Text style={styles.title}>{selectedDate} 내역</Text>
 
-          <View style={styles.contentArea}>
-            {loading ? (
-              <View style={styles.loadingWrap}>
-                <ActivityIndicator size="large" color={theme.colors.primary} />
-              </View>
-            ) : (
-              <ScrollView
-                style={styles.listWrap}
-                contentContainerStyle={styles.listContent}
-                showsVerticalScrollIndicator={false}
-              >
-                {transactions.length === 0 ? (
-                  <Text style={styles.emptyText}>이 날에는 내역이 없어요.</Text>
-                ) : (
-                  transactions.map((tx) => {
-                    const isExpense = tx.type === 'expense';
-                    return (
-                      <Pressable
-                        key={tx.id ?? tx.date + tx.mainCategory + tx.amount}
-                        style={styles.txRow}
-                        onPress={() => tx.id && onTransactionPress?.(tx.id)}
-                      >
-                        <View style={styles.txLeft}>
-                          <Text style={styles.txCategory}>{tx.mainCategory}</Text>
-                          {tx.memo ? (
-                            <Text style={styles.txMemo} numberOfLines={1}>
-                              {tx.memo}
-                            </Text>
-                          ) : null}
-                        </View>
-                        <View style={styles.txRight}>
-                          <Text
-                            style={[styles.txAmount, { color: isExpense ? '#e53935' : '#1e88e5' }]}
-                          >
-                            {isExpense ? '-' : '+'}
-                            {formatWon(Math.abs(tx.amount))}
+        <View style={styles.contentArea}>
+          {loading ? (
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+          ) : (
+            <ScrollView
+              style={styles.listWrap}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {transactions.length === 0 ? (
+                <Text style={styles.emptyText}>이 날에는 내역이 없어요.</Text>
+              ) : (
+                transactions.map((tx) => {
+                  const isExpense = tx.type === 'expense';
+                  return (
+                    <Pressable
+                      key={tx.id ?? tx.date + tx.mainCategory + tx.amount}
+                      style={styles.txRow}
+                      onPress={() => tx.id && onTransactionPress?.(tx.id)}
+                    >
+                      <View style={styles.txLeft}>
+                        <Text style={styles.txCategory}>{tx.mainCategory}</Text>
+                        {tx.memo ? (
+                          <Text style={styles.txMemo} numberOfLines={1}>
+                            {tx.memo}
                           </Text>
-                          {tx.createdAt ? (
-                            <Text style={styles.txTime}>{tx.createdAt.slice(11, 16)}</Text>
-                          ) : null}
-                        </View>
-                      </Pressable>
-                    );
-                  })
-                )}
-              </ScrollView>
-            )}
-          </View>
+                        ) : null}
+                      </View>
+                      <View style={styles.txRight}>
+                        <Text
+                          style={[styles.txAmount, { color: isExpense ? '#e53935' : '#1e88e5' }]}
+                        >
+                          {isExpense ? '-' : '+'}
+                          {formatWon(Math.abs(tx.amount))}
+                        </Text>
+                        {tx.createdAt ? (
+                          <Text style={styles.txTime}>{tx.createdAt.slice(11, 16)}</Text>
+                        ) : null}
+                      </View>
+                    </Pressable>
+                  );
+                })
+              )}
+            </ScrollView>
+          )}
+        </View>
 
-          {/* 추가 버튼 영역 - 시스템 네비에 가리지 않도록 하단 safe area 반영 */}
-          <View style={[styles.addRow, { paddingBottom: theme.spacing.lg + 16 + insets.bottom }]}>
-            <TouchableOpacity style={[styles.addButton]} onPress={onAddIncome} activeOpacity={0.8}>
-              <Text style={[styles.addButtonText, { color: theme.colors.income ?? '#1e88e5' }]}>
-                수입
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.addButton]} onPress={onAddExpense} activeOpacity={0.8}>
-              <Text style={[styles.addButtonText, { color: theme.colors.primary }]}>지출</Text>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-      </View>
-    </Modal>
+        <View style={styles.addRow}>
+          <TouchableOpacity style={[styles.addButton]} onPress={onAddIncome} activeOpacity={0.8}>
+            <Text style={[styles.addButtonText, { color: theme.colors.income ?? '#1e88e5' }]}>
+              수입
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.addButton]} onPress={onAddExpense} activeOpacity={0.8}>
+            <Text style={[styles.addButtonText, { color: theme.colors.primary }]}>지출</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    </View>
   );
 }

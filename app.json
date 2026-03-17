@@ -2,7 +2,7 @@
   "expo": {
     "name": "한눈쏙 가계부",
     "slug": "hanunssok-budget",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "한눈에 쏙 들어오는 가계부 - 수입/지출 기록, 예산 관리, 월별 통계",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

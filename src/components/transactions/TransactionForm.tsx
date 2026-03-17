@@ -44,7 +44,10 @@ import DateTimePicker, {
 } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTransactionChange } from '../common/TransactionChangeContext';
+
+const MIN_BOTTOM_INSET = 40;
 
 type TransactionFormMode = 'create' | 'edit';
 
@@ -66,6 +69,7 @@ export default function TransactionForm({
 }: Props) {
   const theme = useTheme();
   const { isDark } = useColorScheme();
+  const insets = useSafeAreaInsets();
   const isEdit = mode === 'edit';
   const isExpense = type === 'expense';
 
@@ -216,7 +220,9 @@ export default function TransactionForm({
         modalCard: {
           backgroundColor: theme.colors.surface,
           borderRadius: 12,
-          padding: theme.spacing.lg,
+          paddingHorizontal: theme.spacing.lg,
+          paddingTop: theme.spacing.lg,
+          paddingBottom: theme.spacing.lg + Math.max(insets.bottom, MIN_BOTTOM_INSET),
           borderWidth: 1,
           borderColor: theme.colors.border,
         },
@@ -228,7 +234,7 @@ export default function TransactionForm({
         },
         chipDelete: { position: 'absolute', top: -6, right: -6 },
       }),
-    [theme],
+    [theme, insets.bottom],
   );
 
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
@@ -668,7 +674,7 @@ export default function TransactionForm({
           </Pressable>
         </View>
       </KeyboardAwareScrollView>
-      <Modal visible={showAddCategory} transparent animationType="none">
+      <Modal visible={showAddCategory} transparent animationType="none" onRequestClose={closeCategoryModal}>
         <Animated.View style={[styles.modalOverlay, { opacity: dimAnim }]}>
           <Animated.View
             style={[
