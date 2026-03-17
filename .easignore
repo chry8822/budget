@@ -1,2 +1,5 @@
-KPP5TL.DOCX
-**/KPP5TL.DOCX
+# 문서 파일 제외 (빌드 업로드 시 누락/참조 오류 방지)
+*.DOCX
+*.docx
+**/*.DOCX
+**/*.docx

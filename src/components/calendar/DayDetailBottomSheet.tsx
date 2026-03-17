@@ -20,6 +20,7 @@ import {
   PanResponder,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import { Transaction } from '../../db/database';
 import { formatWon } from '../../utils/format';
@@ -55,6 +56,7 @@ export default function DayDetailBottomSheet({
   onAnimationComplete,
 }: Props) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
@@ -334,8 +336,8 @@ export default function DayDetailBottomSheet({
             )}
           </View>
 
-          {/* 추가 버튼 영역 - 메인 FAB와 동일한 지출/수입 버튼 */}
-          <View style={styles.addRow}>
+          {/* 추가 버튼 영역 - 시스템 네비에 가리지 않도록 하단 safe area 반영 */}
+          <View style={[styles.addRow, { paddingBottom: theme.spacing.lg + 16 + insets.bottom }]}>
             <TouchableOpacity style={[styles.addButton]} onPress={onAddIncome} activeOpacity={0.8}>
               <Text style={[styles.addButtonText, { color: theme.colors.income ?? '#1e88e5' }]}>
                 수입

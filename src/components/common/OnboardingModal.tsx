@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -74,6 +75,7 @@ type Props = {
 
 export default function OnboardingModal({ visible, onClose, onSlideAction }: Props) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -94,7 +96,7 @@ export default function OnboardingModal({ visible, onClose, onSlideAction }: Pro
           borderRadius: 20,
           width: SCREEN_WIDTH - 48,
           paddingTop: 20,
-          paddingBottom: 20,
+          paddingBottom: 20 + insets.bottom,
           overflow: 'hidden',
         },
         closeButton: {
@@ -189,7 +191,7 @@ export default function OnboardingModal({ visible, onClose, onSlideAction }: Pro
           color: theme.colors.textMuted,
         },
       }),
-    [theme],
+    [theme, insets.bottom],
   );
 
   const isLastSlide = currentIndex === slides.length - 1;

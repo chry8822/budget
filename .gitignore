@@ -43,3 +43,6 @@ yarn-error.*
 
 KPP5TL.DOCX
 **/KPP5TL.DOCX
+
+# 내부 분석/기획 문서 (저장소에 올리지 않음)
+docs/PREMIUM_FEATURES_ANALYSIS.md

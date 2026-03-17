@@ -7,6 +7,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 
 type Props = {
@@ -25,6 +26,7 @@ export default function MonthPickerBottomSheet({
   onConfirm,
 }: Props) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
 
@@ -39,7 +41,7 @@ export default function MonthPickerBottomSheet({
         backdropTouchable: { flex: 1 },
         sheet: {
           paddingTop: theme.spacing.lg,
-          paddingBottom: theme.spacing.lg,
+          paddingBottom: theme.spacing.lg + insets.bottom,
           paddingHorizontal: theme.spacing.lg,
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
@@ -119,7 +121,7 @@ export default function MonthPickerBottomSheet({
           fontWeight: 'bold',
         },
       }),
-    [theme],
+    [theme, insets.bottom],
   );
 
   const translateY = useRef(new Animated.Value(300)).current;
