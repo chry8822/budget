@@ -70,6 +70,7 @@ export default function StatsScreen() {
           paddingBottom: theme.spacing.sm,
         },
         title: {
+          marginTop: theme.spacing.sm,
           fontSize: theme.typography.title.fontSize,
           fontWeight: 'bold',
           marginBottom: theme.spacing.md,

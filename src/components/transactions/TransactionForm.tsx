@@ -283,7 +283,7 @@ export default function TransactionForm({
     if (initialTransaction) {
       return initialTransaction.mainCategory as MainCategory;
     }
-    return '식비';
+    return isExpense ? '식비' : '급여';
   });
 
   const [subCategory, setSubCategory] = useState(() => initialTransaction?.subCategory ?? '');
@@ -305,7 +305,6 @@ export default function TransactionForm({
   //   }, []);
 
   useEffect(() => {
-    console.log('isExpense', isExpense);
     if (isExpense) {
       setCategories(EXPENSE_MAIN_CATEGORIES);
     } else {
@@ -589,7 +588,8 @@ export default function TransactionForm({
               onPress={() => setMainCategory(name as MainCategory)}
               style={[
                 styles.chip,
-                mainCategory === name && styles.chipSelected && { backgroundColor: mainColor },
+                mainCategory === name && styles.chipSelected,
+                mainCategory === name && { backgroundColor: mainColor },
               ]}
             >
               <Text style={[styles.chipText, mainCategory === name && styles.chipTextSelected]}>
@@ -626,7 +626,8 @@ export default function TransactionForm({
               onPress={() => setPaymentMethod(pm)}
               style={[
                 styles.chip,
-                paymentMethod === pm && styles.chipSelected && { backgroundColor: mainColor },
+                paymentMethod === pm && styles.chipSelected,
+                paymentMethod === pm && { backgroundColor: mainColor },
               ]}
             >
               <Text style={[styles.chipText, paymentMethod === pm && styles.chipTextSelected]}>

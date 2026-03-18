@@ -106,7 +106,7 @@ export default function SummaryScreen() {
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: theme.spacing.sm,
-          paddingVertical: theme.spacing.md,
+          paddingVertical: theme.spacing.sm,
         },
         monthNav: { flexDirection: 'row', alignItems: 'center' },
         monthLabelWrapper: { marginHorizontal: theme.spacing.sm },

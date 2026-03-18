@@ -111,6 +111,7 @@ export default function HomeScreen({ navigation }: Props) {
           marginBottom: theme.spacing.lg,
         },
         homeTabBar: {
+          marginTop: theme.spacing.sm,
           flexDirection: 'row',
           marginBottom: theme.spacing.md,
           borderRadius: 999,
@@ -212,6 +213,9 @@ export default function HomeScreen({ navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       loadSummary();
+      return () => {
+        setSelectedDate(null);
+      };
     }, [year, month]),
   );
 
@@ -304,68 +308,68 @@ export default function HomeScreen({ navigation }: Props) {
       }
     >
       <View style={{ flex: 1 }}>
-      <ScrollView
-        ref={scrollViewRef}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-        onContentSizeChange={onContentSizeChange}
-        onLayout={onLayout}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        contentContainerStyle={{ paddingBottom: 24 }}
-      >
-       
+        <ScrollView
+          ref={scrollViewRef}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+          onContentSizeChange={onContentSizeChange}
+          onLayout={onLayout}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={{ paddingBottom: 24 }}
+        >
+          <View style={styles.homeTabBar}>
+            <AnimatedButton
+              onPress={() => setHomeTab('calendar')}
+              style={[styles.homeTab, homeTab === 'calendar' && styles.homeTabActive]}
+            >
+              <Text
+                style={[styles.homeTabText, homeTab === 'calendar' && styles.homeTabTextActive]}
+              >
+                캘린더
+              </Text>
+            </AnimatedButton>
 
-        <View style={styles.homeTabBar}>
-          <AnimatedButton
-            onPress={() => setHomeTab('calendar')}
-            style={[styles.homeTab, homeTab === 'calendar' && styles.homeTabActive]}
-          >
-            <Text style={[styles.homeTabText, homeTab === 'calendar' && styles.homeTabTextActive]}>
-              캘린더
-            </Text>
-          </AnimatedButton>
+            <AnimatedButton
+              onPress={() => setHomeTab('summary')}
+              style={[styles.homeTab, homeTab === 'summary' && styles.homeTabActive]}
+            >
+              <Text style={[styles.homeTabText, homeTab === 'summary' && styles.homeTabTextActive]}>
+                요약 보기
+              </Text>
+            </AnimatedButton>
+          </View>
 
-          <AnimatedButton
-            onPress={() => setHomeTab('summary')}
-            style={[styles.homeTab, homeTab === 'summary' && styles.homeTabActive]}
-          >
-            <Text style={[styles.homeTabText, homeTab === 'summary' && styles.homeTabTextActive]}>
-              요약 보기
-            </Text>
-          </AnimatedButton>
-        </View>
+          {homeTab === 'calendar' ? (
+            <CalendarSection
+              year={year}
+              month={month}
+              dailySummary={dailySummary}
+              totalIncome={totalIncome}
+              totalExpense={totalExpense}
+              navigation={navigation}
+              selectedDate={selectedDate}
+              onDayPress={setSelectedDate}
+            />
+          ) : (
+            <SummarySection
+              year={year}
+              month={month}
+              remainingDays={remainingDays}
+              todayExpense={todayExpense}
+              totalExpense={totalExpense}
+              loading={loading}
+              last3={last3}
+              max={max}
+              recentRows={recentRows}
+              topCategories={topCategories}
+              dailySummary={dailySummary}
+            />
+          )}
+        </ScrollView>
 
-        {homeTab === 'calendar' ? (
-          <CalendarSection
-            year={year}
-            month={month}
-            dailySummary={dailySummary}
-            totalIncome={totalIncome}
-            totalExpense={totalExpense}
-            navigation={navigation}
-            selectedDate={selectedDate}
-            onDayPress={setSelectedDate}
-          />
-        ) : (
-          <SummarySection
-            year={year}
-            month={month}
-            remainingDays={remainingDays}
-            todayExpense={todayExpense}
-            totalExpense={totalExpense}
-            loading={loading}
-            last3={last3}
-            max={max}
-            recentRows={recentRows}
-            topCategories={topCategories}
-            dailySummary={dailySummary}
-          />
-        )}
-      </ScrollView>
+        <ExpandableFab actions={fabActions} fabOpacity={fabOpacity} fabTranslateX={fabTranslateX} />
 
-      <ExpandableFab actions={fabActions} fabOpacity={fabOpacity} fabTranslateX={fabTranslateX} />
-
-      <ScrollHint scrollRef={scrollViewRef} visible={isScrollable} opacity={scrollHintOpacity} />
+        <ScrollHint scrollRef={scrollViewRef} visible={isScrollable} opacity={scrollHintOpacity} />
       </View>
 
       <OnboardingModal

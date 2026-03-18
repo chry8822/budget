@@ -142,17 +142,25 @@ export default function DayDetailBottomSheet({
           paddingBottom: insets.bottom,
         },
         handleArea: {
-          paddingVertical: theme.spacing.sm,
+          paddingVertical: theme.spacing.md,
           paddingHorizontal: theme.spacing.lg,
+          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
+        },
+        handleSpacer: {
+          flex: 1,
         },
         handle: {
           width: 40,
           height: 4,
           borderRadius: 2,
           backgroundColor: theme.colors.border,
-          marginTop: theme.spacing.md,
+        },
+        closeButton: {
+          flex: 1,
+          alignItems: 'flex-end',
+          padding: 4,
         },
         title: {
           fontSize: theme.typography.sizes.lg,
@@ -160,7 +168,7 @@ export default function DayDetailBottomSheet({
           color: theme.colors.text,
           textAlign: 'center',
           marginBottom: theme.spacing.md,
-          marginTop: theme.spacing.md,
+          marginTop: theme.spacing.sm,
         },
         contentArea: {
           height: LIST_AREA_HEIGHT,
@@ -279,7 +287,10 @@ export default function DayDetailBottomSheet({
 
   return (
     <View style={styles.overlay} pointerEvents="box-none">
-      <Animated.View style={[styles.backdropDim, { opacity: backdropOpacity }]} pointerEvents="none" />
+      <Animated.View
+        style={[styles.backdropDim, { opacity: backdropOpacity }]}
+        pointerEvents="none"
+      />
       <TouchableOpacity
         style={styles.backdropTouchArea}
         onPress={closeWithSlideDown}
@@ -290,7 +301,11 @@ export default function DayDetailBottomSheet({
         pointerEvents="box-none"
       >
         <View style={styles.handleArea} {...panResponder.panHandlers}>
+          <View style={styles.handleSpacer} />
           <View style={styles.handle} />
+          <TouchableOpacity style={styles.closeButton} onPress={closeWithSlideDown} hitSlop={8}>
+            <Ionicons name="close" size={20} color={theme.colors.textMuted} />
+          </TouchableOpacity>
         </View>
         <Text style={styles.title}>{selectedDate} 내역</Text>
 

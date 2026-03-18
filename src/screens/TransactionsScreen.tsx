@@ -272,6 +272,7 @@ export default function TransactionsScreen() {
     return transactions
       .filter((t) => {
         if (!t.date) return false;
+        if (t.type !== 'expense') return false;
         if (!ym) return true; // 'all' 이면 전체
 
         const [y, m] = t.date.split('-').map(Number);
@@ -313,7 +314,7 @@ export default function TransactionsScreen() {
   return (
     <>
       <ScreenContainer>
-        <Text style={theme.typography.title}>내역</Text>
+        <Text style={[theme.typography.title, { marginTop: theme.spacing.sm }]}>내역</Text>
         {/* 범위 선택 버튼 */}
         <View style={styles.summaryTabs}>
           <Pressable
