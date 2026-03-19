@@ -31,7 +31,7 @@ import {
 } from '../db/database';
 import type { Budget } from '../db/database';
 import { useTransactionChange } from '../components/common/TransactionChangeContext';
-import { formatAmount, formatWon } from '../utils/format';
+import { formatWon } from '../utils/format';
 import ScrollHint from '../components/common/ScrollHint';
 import { useScrollability } from '../hooks/useScrollability';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -631,10 +631,10 @@ export default function SummaryScreen() {
                 <View style={styles.compareRow}>
                   <Text style={styles.compareCellLabel}>총 지출</Text>
                   <Text style={styles.compareCellValue}>
-                    {formatAmount(monthlySummary?.totalExpense ?? 0)}
+                    {formatWon(monthlySummary?.totalExpense ?? 0)}
                   </Text>
                   <Text style={styles.compareCellValue}>
-                    {formatAmount(prevMonthlySummary?.totalExpense ?? 0)}
+                    {formatWon(prevMonthlySummary?.totalExpense ?? 0)}
                   </Text>
                 </View>
 
@@ -643,7 +643,7 @@ export default function SummaryScreen() {
 
                   <View style={styles.compareCellValueColumn}>
                     <Text style={styles.compareCellValueText}>
-                      {formatAmount(topCategories[0]?.amount ?? 0)}
+                      {formatWon(topCategories[0]?.amount ?? 0)}
                     </Text>
                     <Text style={styles.compareSubText}>
                       ({topCategories[0]?.mainCategory ?? '-'})
@@ -651,7 +651,7 @@ export default function SummaryScreen() {
                   </View>
                   <View style={styles.compareCellValueColumn}>
                     <Text style={styles.compareCellValueText}>
-                      {formatAmount(prevTopCategory?.amount ?? 0)}
+                      {formatWon(prevTopCategory?.amount ?? 0)}
                     </Text>
                     <Text style={styles.compareSubText}>
                       ({prevTopCategory?.mainCategory ?? '-'})

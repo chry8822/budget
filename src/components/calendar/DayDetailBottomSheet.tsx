@@ -17,6 +17,7 @@ import {
   Pressable,
   PanResponder,
   BackHandler,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,7 +27,7 @@ import { formatWon } from '../../utils/format';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SHEET_HEIGHT = Math.max(SCREEN_HEIGHT * 0.55, 400);
-const SHEET_OVERHEAD = 180;
+const SHEET_OVERHEAD = 145;
 const LIST_AREA_HEIGHT = SHEET_HEIGHT - SHEET_OVERHEAD;
 const DRAG_CLOSE_THRESHOLD = 80;
 
@@ -39,6 +40,7 @@ type Props = {
   onAddExpense: () => void;
   onAddIncome: () => void;
   onTransactionPress?: (id: number) => void;
+  onDeleteTransaction?: (id: number) => void;
   onAnimationComplete?: () => void;
 };
 
@@ -51,10 +53,12 @@ export default function DayDetailBottomSheet({
   onAddExpense,
   onAddIncome,
   onTransactionPress,
+  onDeleteTransaction,
   onAnimationComplete,
 }: Props) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const sheetHeight = SHEET_HEIGHT + insets.bottom;
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
@@ -131,7 +135,7 @@ export default function DayDetailBottomSheet({
           top: 0,
           left: 0,
           right: 0,
-          bottom: SHEET_HEIGHT,
+          bottom: sheetHeight,
         },
         sheet: {
           width: '100%',
@@ -139,7 +143,6 @@ export default function DayDetailBottomSheet({
           borderTopRightRadius: 24,
           backgroundColor: theme.colors.surface,
           overflow: 'hidden',
-          paddingBottom: insets.bottom,
         },
         handleArea: {
           paddingVertical: theme.spacing.md,
@@ -207,7 +210,12 @@ export default function DayDetailBottomSheet({
           flex: 1,
           paddingRight: theme.spacing.sm,
         },
-        txRight: { alignItems: 'flex-end' },
+        txRight: { alignItems: 'flex-end', marginRight: theme.spacing.sm },
+        txDeleteBtn: {
+          padding: 6,
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
         txCategory: {
           ...theme.typography.body,
           fontWeight: '600',
@@ -232,8 +240,8 @@ export default function DayDetailBottomSheet({
           flexDirection: 'row',
           gap: theme.spacing.md,
           paddingHorizontal: theme.spacing.md,
-          paddingVertical: theme.spacing.md,
-          paddingBottom: theme.spacing.lg + 16,
+          paddingTop: theme.spacing.md,
+          paddingBottom: theme.spacing.md,
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: theme.colors.border,
           backgroundColor: theme.colors.surface,
@@ -254,7 +262,7 @@ export default function DayDetailBottomSheet({
           fontWeight: 'bold',
         },
       }),
-    [theme, insets.bottom],
+    [theme, insets.bottom, sheetHeight],
   );
 
   const panResponder = useMemo(
@@ -297,7 +305,7 @@ export default function DayDetailBottomSheet({
         activeOpacity={1}
       />
       <Animated.View
-        style={[styles.sheet, { height: SHEET_HEIGHT, transform: [{ translateY }] }]}
+        style={[styles.sheet, { height: sheetHeight, transform: [{ translateY }] }]}
         pointerEvents="box-none"
       >
         <View style={styles.handleArea} {...panResponder.panHandlers}>
@@ -325,6 +333,24 @@ export default function DayDetailBottomSheet({
               ) : (
                 transactions.map((tx) => {
                   const isExpense = tx.type === 'expense';
+
+                  const handleDelete = () => {
+                    if (!tx.id) return;
+                    Alert.alert(
+                      '내역 삭제',
+                      '이 내역을 삭제할까요?',
+                      [
+                        { text: '취소', style: 'cancel' },
+                        {
+                          text: '삭제',
+                          style: 'destructive',
+                          onPress: () => tx.id && onDeleteTransaction?.(tx.id),
+                        },
+                      ],
+                      { cancelable: true },
+                    );
+                  };
+
                   return (
                     <Pressable
                       key={tx.id ?? tx.date + tx.mainCategory + tx.amount}
@@ -350,6 +376,13 @@ export default function DayDetailBottomSheet({
                           <Text style={styles.txTime}>{tx.createdAt.slice(11, 16)}</Text>
                         ) : null}
                       </View>
+                      <TouchableOpacity
+                        style={styles.txDeleteBtn}
+                        onPress={handleDelete}
+                        hitSlop={8}
+                      >
+                        <Ionicons name="trash-outline" size={16} color={theme.colors.textMuted} />
+                      </TouchableOpacity>
                     </Pressable>
                   );
                 })

@@ -233,6 +233,10 @@ function createCalendarStyles(theme: ReturnType<typeof useTheme>) {
       fontSize: theme.typography.sizes.xs,
       color: theme.colors.income,
     },
+    dayNumberToday: {
+      color: theme.colors.primary,
+      fontWeight: 'bold',
+    },
   });
 }
 
@@ -275,6 +279,14 @@ export default function CalendarSection({
   const [displayTotalExpense, setDisplayTotalExpense] = useState(totalExpense);
   const [displayDailySummary, setDisplayDailySummary] = useState<DailySummaryRow[]>(dailySummary);
   const [monthPickerVisible, setMonthPickerVisible] = useState(false);
+
+  const todayString = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }, []);
 
   useEffect(() => {
     setDisplayYear(year);
@@ -474,6 +486,7 @@ export default function CalendarSection({
 
             const isDisabled = state === 'disabled';
             const isSelected = selectedDate === key;
+            const isToday = key === todayString;
 
             const exp = row?.expense ?? 0;
             const inc = row?.income ?? 0;
@@ -495,6 +508,7 @@ export default function CalendarSection({
                 <Text
                   style={[
                     styles.dayNumber,
+                    isToday && styles.dayNumberToday,
                     isDisabled && styles.dayNumberDisabled,
                     isSelected && styles.dayNumberSelected,
                   ]}

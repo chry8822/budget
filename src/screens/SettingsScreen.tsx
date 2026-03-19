@@ -1,9 +1,9 @@
 /**
  * 설정 페이지
- * - 다크 모드 스위치, 전체 데이터 초기화
+ * - 다크 모드 스위치, 전체 데이터 초기화, 알림 설정
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,11 @@ import {
   Pressable,
   ActivityIndicator,
   Vibration,
+  TouchableOpacity,
+  Platform,
+  Alert,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenContainer from '../components/common/ScreenContainer';
 
@@ -23,6 +27,11 @@ import { useColorScheme } from '../theme/ThemeContext';
 import { useTransactionChange } from '../components/common/TransactionChangeContext';
 import { clearAllData } from '../db/database';
 import Toast from 'react-native-toast-message';
+import {
+  loadNotificationSettings,
+  saveNotificationSettings,
+  requestNotificationPermission,
+} from '../utils/notifications';
 
 export default function SettingsScreen() {
   const { theme, isDark, setColorScheme } = useColorScheme();
@@ -30,6 +39,71 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const [resetModalVisible, setResetModalVisible] = useState(false);
   const [resetting, setResetting] = useState(false);
+
+  // 알림 설정 상태
+  const [notiEnabled, setNotiEnabled] = useState(false);
+  const [notiHour, setNotiHour] = useState(21);
+  const [notiMinute, setNotiMinute] = useState(0);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  useEffect(() => {
+    loadNotificationSettings().then(({ enabled, hour, minute }) => {
+      setNotiEnabled(enabled);
+      setNotiHour(hour);
+      setNotiMinute(minute);
+    });
+  }, []);
+
+  const notiTimeDate = useMemo(() => {
+    const d = new Date();
+    d.setHours(notiHour, notiMinute, 0, 0);
+    return d;
+  }, [notiHour, notiMinute]);
+
+  const notiTimeLabel = useMemo(() => {
+    const h = notiHour;
+    const m = notiMinute;
+    const period = h < 12 ? '오전' : '오후';
+    const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${period} ${hour12}:${String(m).padStart(2, '0')}`;
+  }, [notiHour, notiMinute]);
+
+  const handleNotiToggle = useCallback(
+    async (value: boolean) => {
+      if (value) {
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+          Alert.alert(
+            '알림 권한 필요',
+            '설정 앱에서 알림 권한을 허용해 주세요.',
+            [{ text: '확인' }],
+          );
+          return;
+        }
+      }
+      setNotiEnabled(value);
+      await saveNotificationSettings(value, notiHour, notiMinute);
+      Toast.show({
+        type: 'success',
+        text1: value ? '알림이 켜졌어요.' : '알림이 꺼졌어요.',
+        onPress: () => Toast.hide(),
+      });
+    },
+    [notiHour, notiMinute],
+  );
+
+  const handleTimeChange = useCallback(
+    async (_event: DateTimePickerEvent, date?: Date) => {
+      if (Platform.OS === 'android') setShowTimePicker(false);
+      if (!date) return;
+      const h = date.getHours();
+      const m = date.getMinutes();
+      setNotiHour(h);
+      setNotiMinute(m);
+      await saveNotificationSettings(notiEnabled, h, m);
+    },
+    [notiEnabled],
+  );
 
   const styles = useMemo(
     () =>
@@ -130,6 +204,30 @@ export default function SettingsScreen() {
           color: theme.colors.onPrimary ?? '#fff',
           fontWeight: '600',
         },
+        notiTimeRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingVertical: theme.spacing.md,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+        },
+        notiTimeLabel: {
+          fontSize: theme.typography.sizes.md,
+          color: theme.colors.textMuted,
+        },
+        notiTimeBadge: {
+          paddingVertical: theme.spacing.xs,
+          paddingHorizontal: theme.spacing.sm,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: theme.colors.primary,
+        },
+        notiTimeBadgeText: {
+          fontSize: theme.typography.sizes.sm,
+          color: theme.colors.primary,
+          fontWeight: '600',
+        },
       }),
     [theme, insets.bottom],
   );
@@ -166,6 +264,8 @@ export default function SettingsScreen() {
   return (
     <ScreenContainer>
       <ScreenHeader title="설정" />
+
+      {/* 다크 모드 */}
       <View style={styles.section}>
         <Text style={styles.label}>다크 모드</Text>
         <Switch
@@ -175,6 +275,40 @@ export default function SettingsScreen() {
           thumbColor={theme.colors.primary}
         />
       </View>
+
+      {/* 리마인더 알림 */}
+      <View style={styles.section}>
+        <Text style={styles.label}>리마인더 알림</Text>
+        <Switch
+          value={notiEnabled}
+          onValueChange={handleNotiToggle}
+          trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+          thumbColor={theme.colors.primary}
+        />
+      </View>
+      {notiEnabled && (
+        <View style={styles.notiTimeRow}>
+          <Text style={styles.notiTimeLabel}>알림 시간</Text>
+          <TouchableOpacity
+            style={styles.notiTimeBadge}
+            onPress={() => setShowTimePicker(true)}
+          >
+            <Text style={styles.notiTimeBadgeText}>{notiTimeLabel}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {showTimePicker && (
+        <DateTimePicker
+          value={notiTimeDate}
+          mode="time"
+          is24Hour={false}
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleTimeChange}
+          onTouchCancel={() => setShowTimePicker(false)}
+        />
+      )}
+
+      {/* 전체 데이터 초기화 */}
       <View style={styles.resetSection}>
         <Text style={styles.label}>전체 데이터 초기화</Text>
         <Pressable onPress={handleResetPress} style={styles.resetButton}>

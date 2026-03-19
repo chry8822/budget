@@ -16,6 +16,7 @@ import {
   DailySummaryRow,
   getDailySummaryOfMonth,
   getTransactionsByDate,
+  deleteTransactionById,
 } from '../db/database';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useCallback } from 'react';
@@ -178,6 +179,21 @@ export default function HomeScreen({ navigation }: Props) {
     }
   }, [selectedDate]);
 
+  const handleDeleteTransaction = useCallback(async (id: number) => {
+    try {
+      await deleteTransactionById(id);
+      // 팝업 내 목록 즉시 갱신
+      if (selectedDate) {
+        const rows = await getTransactionsByDate(selectedDate);
+        setSelectedTransactions(rows);
+      }
+      // 메인 요약(캘린더 합계 등)도 갱신
+      loadSummary();
+    } catch (e) {
+      console.error('삭제 오류', e);
+    }
+  }, [selectedDate]);
+
   const totalIncome = summary?.totalIncome ?? 0;
   const totalExpense = summary?.totalExpense ?? 0;
   const topCategories = summary?.byCategory.slice(0, 3) ?? [];
@@ -303,6 +319,7 @@ export default function HomeScreen({ navigation }: Props) {
               setSelectedDate(null);
               navigation.navigate('EditTransaction', { id });
             }}
+            onDeleteTransaction={handleDeleteTransaction}
           />
         ) : null
       }
