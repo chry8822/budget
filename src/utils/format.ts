@@ -20,3 +20,15 @@ export function formatWon(amount: number): string {
   if (!Number.isFinite(amount)) return '0원';
   return `${amount.toLocaleString()}원`;
 }
+
+/**
+ * 차트 레이블용 압축 금액 포맷
+ * - 1만 미만: 원 단위 (e.g. '9,999원')
+ * - 1만 이상: 만원 단위, 소수점 1자리 (e.g. '1.5만원', '50만원')
+ */
+export function formatChartAmount(amount: number): string {
+  if (!Number.isFinite(amount) || amount === 0) return '0원';
+  if (amount < 10000) return `${amount.toLocaleString()}원`;
+  const man = Math.round((amount / 10000) * 10) / 10;
+  return `${man}만원`;
+}

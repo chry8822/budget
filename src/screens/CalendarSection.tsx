@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   Animated,
   Easing,
+  ActivityIndicator,
 } from 'react-native';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import { useColorScheme, useTheme } from '../theme/ThemeContext';
@@ -65,7 +66,88 @@ LocaleConfig.defaultLocale = 'ko';
 
 const SELECTION_FADE_DURATION = 220;
 
+const WEEK_DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'] as const;
+
+function formatCellAmount(amount: number): string {
+  const abs = Math.abs(amount);
+  if (abs >= 1_000_000) {
+    const man = amount / 10_000;
+    if (Math.abs(man) >= 10) return `${Math.round(man)}만`;
+    return `${man.toFixed(1)}만`;
+  }
+  return amount.toLocaleString();
+}
+
 type CalendarDayCellStyles = ReturnType<typeof createCalendarStyles>;
+
+type CalendarDayProps = DayProps & {
+  date?: DateData;
+  summaryMap: Record<string, DailySummaryRow>;
+  selectedDate: string | null;
+  todayString: string;
+  firstDayOfWeek: number;
+  lastDayOfMonth: number;
+  onDayPress: (dateString: string) => void;
+  calStyles: CalendarDayCellStyles;
+};
+
+const CalendarDay = React.memo(function CalendarDay({
+  date,
+  state,
+  onPress,
+  summaryMap,
+  selectedDate,
+  todayString,
+  firstDayOfWeek,
+  lastDayOfMonth,
+  onDayPress,
+  calStyles,
+}: CalendarDayProps) {
+  if (!date) return null;
+
+  const thisRow = Math.floor((firstDayOfWeek + (date.day ?? 1) - 1) / 7);
+  const lastRow = Math.floor((firstDayOfWeek + lastDayOfMonth - 1) / 7);
+  const isLastRow = thisRow === lastRow;
+
+  const key = date.dateString;
+  const row = summaryMap[key];
+
+  const isDisabled = state === 'disabled';
+  const isSelected = selectedDate === key;
+  const isToday = key === todayString;
+
+  const exp = row?.expense ?? 0;
+  const inc = row?.income ?? 0;
+
+  const handleDayPress = () => {
+    if (isDisabled) return;
+    onDayPress(key);
+    onPress?.(date);
+  };
+
+  return (
+    <CalendarDayCell
+      isSelected={isSelected}
+      isLastRow={isLastRow}
+      isDisabled={isDisabled}
+      onPress={handleDayPress}
+      styles={calStyles}
+    >
+      <Text
+        style={[
+          calStyles.dayNumber,
+          isToday && calStyles.dayNumberToday,
+          isDisabled && calStyles.dayNumberDisabled,
+          isSelected && calStyles.dayNumberSelected,
+        ]}
+      >
+        {date.day}
+      </Text>
+      {exp !== 0 && <Text style={calStyles.dayExpense}>{formatCellAmount(exp)}</Text>}
+      {inc !== 0 && <Text style={calStyles.dayIncome}>{formatCellAmount(inc)}</Text>}
+    </CalendarDayCell>
+  );
+});
 
 function CalendarDayCell({
   isSelected,
@@ -237,6 +319,18 @@ function createCalendarStyles(theme: ReturnType<typeof useTheme>) {
       color: theme.colors.primary,
       fontWeight: 'bold',
     },
+    calendarLoadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden',
+    },
+    calendarLoadingDim: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: theme.colors.surface,
+      opacity: 0.75,
+    },
   });
 }
 
@@ -259,6 +353,12 @@ type DayData = {
   timestamp: number;
 };
 
+type MonthCacheEntry = {
+  income: number;
+  expense: number;
+  daily: DailySummaryRow[];
+};
+
 export default function CalendarSection({
   year,
   month,
@@ -279,6 +379,11 @@ export default function CalendarSection({
   const [displayTotalExpense, setDisplayTotalExpense] = useState(totalExpense);
   const [displayDailySummary, setDisplayDailySummary] = useState<DailySummaryRow[]>(dailySummary);
   const [monthPickerVisible, setMonthPickerVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const monthCacheRef = useRef<Map<string, MonthCacheEntry>>(new Map());
+
+  const cacheKey = (y: number, m: number) => `${y}-${String(m).padStart(2, '0')}`;
 
   const todayString = useMemo(() => {
     const now = new Date();
@@ -296,19 +401,54 @@ export default function CalendarSection({
     setDisplayDailySummary(dailySummary);
   }, [year, month, totalIncome, totalExpense, dailySummary]);
 
-  const loadDisplayMonth = async (y: number, m: number) => {
+  const loadDisplayMonth = useCallback(async (y: number, m: number) => {
     try {
       const [monthly, daily] = await Promise.all([
         getMonthlySummary(y, m),
         getDailySummaryOfMonth(y, m),
       ]);
+      monthCacheRef.current.set(cacheKey(y, m), {
+        income: monthly.totalIncome,
+        expense: monthly.totalExpense,
+        daily,
+      });
       setDisplayTotalIncome(monthly.totalIncome);
       setDisplayTotalExpense(monthly.totalExpense);
       setDisplayDailySummary(daily);
     } catch (e) {
       console.error('캘린더 월별 데이터 로드 실패', e);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
+
+  const preloadMonth = useCallback(async (y: number, m: number) => {
+    const key = cacheKey(y, m);
+    if (monthCacheRef.current.has(key)) return;
+    try {
+      const [monthly, daily] = await Promise.all([
+        getMonthlySummary(y, m),
+        getDailySummaryOfMonth(y, m),
+      ]);
+      monthCacheRef.current.set(key, {
+        income: monthly.totalIncome,
+        expense: monthly.totalExpense,
+        daily,
+      });
+    } catch {
+      // 프리로드 실패는 조용히 무시
+    }
+  }, []);
+
+  // 현재 달 표시 중 인접 달 백그라운드 프리로드
+  useEffect(() => {
+    const prevM = displayMonth === 1 ? 12 : displayMonth - 1;
+    const prevY = displayMonth === 1 ? displayYear - 1 : displayYear;
+    const nextM = displayMonth === 12 ? 1 : displayMonth + 1;
+    const nextY = displayMonth === 12 ? displayYear + 1 : displayYear;
+    preloadMonth(prevY, prevM);
+    preloadMonth(nextY, nextM);
+  }, [displayYear, displayMonth, preloadMonth]);
 
   // 1) 달력에 뿌릴 markedDates (날짜별 합계 반영)
   const markedDates = useMemo(() => {
@@ -358,35 +498,64 @@ export default function CalendarSection({
     return map;
   }, [displayDailySummary]);
 
-  function formatCellAmount(amount: number) {
-    const abs = Math.abs(amount);
-    if (abs >= 1_000_000) {
-      const man = amount / 10_000;
-      if (Math.abs(man) >= 10) return `${Math.round(man)}만`;
-      return `${man.toFixed(1)}만`;
-    }
-    return amount.toLocaleString();
-  }
+  const { firstDayOfWeek, lastDayOfMonth } = useMemo(() => ({
+    firstDayOfWeek: new Date(displayYear, displayMonth - 1, 1).getDay(),
+    lastDayOfMonth: new Date(displayYear, displayMonth, 0).getDate(),
+  }), [displayYear, displayMonth]);
 
   const initialMonth = `${displayYear}-${String(displayMonth).padStart(2, '0')}-01`;
 
-  const goToPrevMonth = () => {
+  const goToPrevMonth = useCallback(() => {
     const prevMonth = displayMonth === 1 ? 12 : displayMonth - 1;
     const prevYear = displayMonth === 1 ? displayYear - 1 : displayYear;
-    setDisplayYear(prevYear);
-    setDisplayMonth(prevMonth);
-    loadDisplayMonth(prevYear, prevMonth);
-  };
+    const cached = monthCacheRef.current.get(cacheKey(prevYear, prevMonth));
+    if (cached) {
+      setDisplayYear(prevYear);
+      setDisplayMonth(prevMonth);
+      setDisplayTotalIncome(cached.income);
+      setDisplayTotalExpense(cached.expense);
+      setDisplayDailySummary(cached.daily);
+    } else {
+      setDisplayYear(prevYear);
+      setDisplayMonth(prevMonth);
+      setIsLoading(true);
+      loadDisplayMonth(prevYear, prevMonth);
+    }
+  }, [displayMonth, displayYear, loadDisplayMonth]);
 
-  const goToNextMonth = () => {
+  const goToNextMonth = useCallback(() => {
     const nextMonth = displayMonth === 12 ? 1 : displayMonth + 1;
     const nextYear = displayMonth === 12 ? displayYear + 1 : displayYear;
-    setDisplayYear(nextYear);
-    setDisplayMonth(nextMonth);
-    loadDisplayMonth(nextYear, nextMonth);
-  };
+    const cached = monthCacheRef.current.get(cacheKey(nextYear, nextMonth));
+    if (cached) {
+      setDisplayYear(nextYear);
+      setDisplayMonth(nextMonth);
+      setDisplayTotalIncome(cached.income);
+      setDisplayTotalExpense(cached.expense);
+      setDisplayDailySummary(cached.daily);
+    } else {
+      setDisplayYear(nextYear);
+      setDisplayMonth(nextMonth);
+      setIsLoading(true);
+      loadDisplayMonth(nextYear, nextMonth);
+    }
+  }, [displayMonth, displayYear, loadDisplayMonth]);
 
-  const weekDayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  const renderDayComponent = useCallback(
+    (props: DayProps & { date?: DateData }) => (
+      <CalendarDay
+        {...props}
+        summaryMap={summaryMap}
+        selectedDate={selectedDate}
+        todayString={todayString}
+        firstDayOfWeek={firstDayOfWeek}
+        lastDayOfMonth={lastDayOfMonth}
+        onDayPress={onDayPress}
+        calStyles={styles}
+      />
+    ),
+    [summaryMap, selectedDate, todayString, firstDayOfWeek, lastDayOfMonth, onDayPress, styles],
+  );
 
   return (
     <>
@@ -410,7 +579,7 @@ export default function CalendarSection({
 
       {/* ✅ 진짜 달력 */}
 
-      <View style={styles.calendarCard} pointerEvents="box-none">
+      <View style={styles.calendarCard}>
         <Calendar
           key={`calendar-${colorScheme}`}
           hideExtraDays
@@ -419,9 +588,19 @@ export default function CalendarSection({
           onMonthChange={(date: DayData) => {
             const y = date.year ?? displayYear;
             const m = date.month ?? displayMonth;
-            setDisplayYear(y);
-            setDisplayMonth(m);
-            loadDisplayMonth(y, m);
+            const cached = monthCacheRef.current.get(cacheKey(y, m));
+            if (cached) {
+              setDisplayYear(y);
+              setDisplayMonth(m);
+              setDisplayTotalIncome(cached.income);
+              setDisplayTotalExpense(cached.expense);
+              setDisplayDailySummary(cached.daily);
+            } else {
+              setDisplayYear(y);
+              setDisplayMonth(m);
+              setIsLoading(true);
+              loadDisplayMonth(y, m);
+            }
           }}
           onDayPress={(day: DayData) => onDayPress(day.dateString)}
           markingType="custom"
@@ -451,7 +630,7 @@ export default function CalendarSection({
                 </TouchableOpacity>
               </View>
               <View style={styles.weekDayRow}>
-                {weekDayNames.map((day) => (
+                {WEEK_DAY_NAMES.map((day) => (
                   <View key={day} style={styles.weekDayCell}>
                     <Text style={styles.weekDayText}>{day}</Text>
                   </View>
@@ -472,55 +651,14 @@ export default function CalendarSection({
             textDayHeaderFontSize: 13,
             textDayHeaderFontWeight: '600',
           }}
-          dayComponent={(props: DayProps & { date?: DateData }) => {
-            const { date, state, onPress } = props;
-            if (!date) return null;
-            const firstDayOfWeek = new Date(displayYear, displayMonth - 1, 1).getDay();
-            const lastDate = new Date(displayYear, displayMonth, 0).getDate();
-            const thisRow = Math.floor((firstDayOfWeek + (date?.day ?? 1) - 1) / 7);
-            const lastRow = Math.floor((firstDayOfWeek + lastDate - 1) / 7);
-            const isLastRow = thisRow === lastRow;
-
-            const key = date.dateString; // 'YYYY-MM-DD'
-            const row = summaryMap[key]; // DailySummaryRow or undefined
-
-            const isDisabled = state === 'disabled';
-            const isSelected = selectedDate === key;
-            const isToday = key === todayString;
-
-            const exp = row?.expense ?? 0;
-            const inc = row?.income ?? 0;
-
-            const handleDayPress = () => {
-              if (isDisabled) return;
-              onDayPress(key);
-              onPress?.(date);
-            };
-
-            return (
-              <CalendarDayCell
-                isSelected={isSelected}
-                isLastRow={isLastRow}
-                isDisabled={isDisabled}
-                onPress={handleDayPress}
-                styles={styles}
-              >
-                <Text
-                  style={[
-                    styles.dayNumber,
-                    isToday && styles.dayNumberToday,
-                    isDisabled && styles.dayNumberDisabled,
-                    isSelected && styles.dayNumberSelected,
-                  ]}
-                >
-                  {date.day}
-                </Text>
-                {exp !== 0 && <Text style={styles.dayExpense}>{formatCellAmount(exp)}</Text>}
-                {inc !== 0 && <Text style={styles.dayIncome}>{formatCellAmount(inc)}</Text>}
-              </CalendarDayCell>
-            );
-          }}
+          dayComponent={renderDayComponent}
         />
+        {isLoading && (
+          <View style={styles.calendarLoadingOverlay} pointerEvents="none">
+            <View style={styles.calendarLoadingDim} />
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+          </View>
+        )}
       </View>
 
       <MonthPickerBottomSheet

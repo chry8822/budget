@@ -5,7 +5,7 @@
  * - 생성(create) / 수정(edit) 모드 지원
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Modal,
   Animated,
@@ -17,6 +17,7 @@ import {
   Pressable,
   Platform,
 } from 'react-native';
+import HapticPressable from '../common/HapticPressable';
 import ScreenContainer from '../common/ScreenContainer';
 import { useTheme, useColorScheme } from '../../theme/ThemeContext';
 import {
@@ -48,6 +49,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTransactionChange } from '../common/TransactionChangeContext';
 
 const MIN_BOTTOM_INSET = 40;
+
+const QUICK_AMOUNTS = [
+  { label: '+1천', delta: 1_000 },
+  { label: '+5천', delta: 5_000 },
+  { label: '+1만', delta: 10_000 },
+  { label: '+5만', delta: 50_000 },
+  { label: '+10만', delta: 100_000 },
+  { label: '+100만', delta: 1_000_000 },
+] as const;
 
 type TransactionFormMode = 'create' | 'edit';
 
@@ -275,7 +285,9 @@ export default function TransactionForm({
     return null;
   });
 
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>(() =>
+    isExpense ? EXPENSE_MAIN_CATEGORIES : INCOME_MAIN_CATEGORIES,
+  );
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategory, setNewCategory] = useState('');
 
@@ -359,29 +371,18 @@ export default function TransactionForm({
       setShowAddCategory(false); // 애니메이션 끝난 뒤 닫기
     });
   };
-  const handleAmountChange = (text: string) => {
-    // 입력값에서 숫자만 남기기
+  const handleAmountChange = useCallback((text: string) => {
     const numeric = text.replace(/[^0-9]/g, '');
-
     if (!numeric) {
       setAmountText('');
       setAmountValue(null);
       return;
     }
-
-    // 숫자로 변환
     const value = Number(numeric);
-    if (Number.isNaN(value)) {
-      // 이론상 여기 안 오지만 방어 코드
-      return;
-    }
-
-    // 표시용 문자열: 1000 -> 1,000
-    const formatted = value.toLocaleString();
-
-    setAmountText(formatted);
+    if (Number.isNaN(value)) return;
+    setAmountText(value.toLocaleString());
     setAmountValue(value);
-  };
+  }, []);
 
   const handleSave = async () => {
     if (!amountValue || amountValue <= 0) {
@@ -456,17 +457,20 @@ export default function TransactionForm({
       setMainCategory((prev) => (prev === name ? (categories[0] as MainCategory) : prev));
     }
   };
-  const appendQuickAmount = (delta: number) => {
-    const base = amountValue ?? 0;
-    const newValue = base + delta;
-    if (newValue <= 0) {
-      setAmountValue(null);
-      setAmountText('');
-      return;
-    }
-    setAmountValue(newValue);
-    setAmountText(newValue.toLocaleString());
-  };
+  const appendQuickAmount = useCallback(
+    (delta: number) => {
+      const base = amountValue ?? 0;
+      const newValue = base + delta;
+      if (newValue <= 0) {
+        setAmountValue(null);
+        setAmountText('');
+        return;
+      }
+      setAmountValue(newValue);
+      setAmountText(newValue.toLocaleString());
+    },
+    [amountValue],
+  );
 
   return (
     <ScreenContainer style={styles.container} safeBottom>
@@ -559,31 +563,23 @@ export default function TransactionForm({
         </View>
 
         <View style={styles.quickAmountContainer}>
-          <Pressable style={styles.quickAmountButton} onPress={() => appendQuickAmount(1000)}>
-            <Text style={styles.quickAmountText}>+1천</Text>
-          </Pressable>
-          <Pressable style={styles.quickAmountButton} onPress={() => appendQuickAmount(5000)}>
-            <Text style={styles.quickAmountText}>+5천</Text>
-          </Pressable>
-          <Pressable style={styles.quickAmountButton} onPress={() => appendQuickAmount(10000)}>
-            <Text style={styles.quickAmountText}>+1만</Text>
-          </Pressable>
-          <Pressable style={styles.quickAmountButton} onPress={() => appendQuickAmount(50000)}>
-            <Text style={styles.quickAmountText}>+5만</Text>
-          </Pressable>
-          <Pressable style={styles.quickAmountButton} onPress={() => appendQuickAmount(100000)}>
-            <Text style={styles.quickAmountText}>+10만</Text>
-          </Pressable>
-          <Pressable style={styles.quickAmountButton} onPress={() => appendQuickAmount(1000000)}>
-            <Text style={styles.quickAmountText}>+100만</Text>
-          </Pressable>
+          {QUICK_AMOUNTS.map(({ label, delta }) => (
+            <HapticPressable
+              key={label}
+              onPress={() => appendQuickAmount(delta)}
+              style={styles.quickAmountButton}
+              pressedScale={0.88}
+            >
+              <Text style={styles.quickAmountText}>{label}</Text>
+            </HapticPressable>
+          ))}
         </View>
 
         <Text style={styles.label}>대분류</Text>
 
         <View style={styles.chipContainer}>
           {categories.map((name) => (
-            <Pressable
+            <HapticPressable
               key={name}
               onPress={() => setMainCategory(name as MainCategory)}
               style={[
@@ -591,16 +587,17 @@ export default function TransactionForm({
                 mainCategory === name && styles.chipSelected,
                 mainCategory === name && { backgroundColor: mainColor },
               ]}
+              pressedScale={0.93}
             >
               <Text style={[styles.chipText, mainCategory === name && styles.chipTextSelected]}>
                 {name}
               </Text>
-            </Pressable>
+            </HapticPressable>
           ))}
 
-          <Pressable onPress={openCategoryModal} style={styles.chip}>
+          <HapticPressable onPress={openCategoryModal} style={styles.chip} pressedScale={0.93}>
             <Text style={styles.chipText}>+ 직접입력</Text>
-          </Pressable>
+          </HapticPressable>
         </View>
         <Text style={styles.label}>소분류</Text>
         <View style={styles.inputWrapper}>
@@ -621,7 +618,7 @@ export default function TransactionForm({
         <Text style={styles.label}>{isExpense ? '결제' : '수입'} 수단</Text>
         <View style={styles.chipContainer}>
           {paymentMethods.map((pm) => (
-            <Pressable
+            <HapticPressable
               key={pm}
               onPress={() => setPaymentMethod(pm)}
               style={[
@@ -629,11 +626,12 @@ export default function TransactionForm({
                 paymentMethod === pm && styles.chipSelected,
                 paymentMethod === pm && { backgroundColor: mainColor },
               ]}
+              pressedScale={0.93}
             >
               <Text style={[styles.chipText, paymentMethod === pm && styles.chipTextSelected]}>
                 {pm}
               </Text>
-            </Pressable>
+            </HapticPressable>
           ))}
         </View>
 
@@ -659,20 +657,24 @@ export default function TransactionForm({
         </View>
 
         <View style={styles.buttonRow}>
-          <Pressable
+          <HapticPressable
             style={[styles.button, styles.cancelButton]}
             onPress={onCancel}
             disabled={saving}
+            pressedScale={0.95}
+            haptic="none"
           >
             <Text style={styles.cancelButtonText}>취소</Text>
-          </Pressable>
-          <Pressable
+          </HapticPressable>
+          <HapticPressable
             style={[styles.button, styles.saveButton, { backgroundColor: mainColor }]}
             onPress={handleSave}
             disabled={saving}
+            pressedScale={0.95}
+            haptic="medium"
           >
             <Text style={styles.saveButtonText}>{saving ? '저장 중...' : resolvedSubmitText}</Text>
-          </Pressable>
+          </HapticPressable>
         </View>
       </KeyboardAwareScrollView>
       <Modal visible={showAddCategory} transparent animationType="none" onRequestClose={closeCategoryModal}>

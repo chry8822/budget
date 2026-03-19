@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { DailySummaryRow, MonthlySummary, Transaction } from '../db/database';
 import { useTheme } from '../theme/ThemeContext';
-import { formatWon } from '../utils/format';
+import { formatWon, formatChartAmount } from '../utils/format';
 import { Ionicons } from '@expo/vector-icons';
 
 type SummarySectionProps = {
@@ -253,7 +253,7 @@ export default function SummarySection(props: SummarySectionProps) {
                     <Text style={styles.miniBarLabel}>
                       <Text style={styles.miniBarDayBold}>{day}일</Text>
                       <Text style={styles.miniBarDaySub}>
-                        ({formatWon(row.expense ?? 0)})
+                        ({formatChartAmount(row.expense ?? 0)})
                       </Text>
                     </Text>
                   </View>

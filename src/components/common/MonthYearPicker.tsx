@@ -141,36 +141,58 @@ export default function MonthYearPicker({
     const monthScrollY = useRef(new Animated.Value(0)).current;
     const yearIndexRef = useRef<number | null>(null);
     const monthIndexRef = useRef<number | null>(null);
+    // 프로그래밍 스크롤 중 scroll 이벤트 무시용 플래그
+    const isSyncingRef = useRef(false);
+    const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const syncToSelection = (y: number, m: number) => {
-        const yearIndex = years.indexOf(y);
+    const syncToSelection = (y: number, m: number, yearList: number[]) => {
+        const yearIndex = yearList.indexOf(y);
         const monthIndex = months.indexOf(m);
         const yearOffset = Math.max(0, yearIndex) * WHEEL_ITEM_HEIGHT;
         const monthOffset = Math.max(0, monthIndex) * WHEEL_ITEM_HEIGHT;
+
+        // 프로그래밍 스크롤 시작 — scroll 이벤트 무시
+        isSyncingRef.current = true;
+        if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+
         yearScrollY.setValue(yearOffset);
         monthScrollY.setValue(monthOffset);
         yearScrollRef.current?.scrollTo({ y: yearOffset, animated: false });
         monthScrollRef.current?.scrollTo({ y: monthOffset, animated: false });
-        setTimeout(() => {
-            yearScrollY.setValue(yearOffset);
-            monthScrollY.setValue(monthOffset);
-            yearScrollRef.current?.scrollTo({ y: yearOffset, animated: false });
-            monthScrollRef.current?.scrollTo({ y: monthOffset, animated: false });
-        }, 50);
+
+        // 스크롤 완료 후 사용자 입력 다시 허용 (레이아웃 안정화 대기)
+        syncTimerRef.current = setTimeout(() => {
+            isSyncingRef.current = false;
+            syncTimerRef.current = null;
+        }, 80);
     };
 
+    // 피커가 열릴 때(visible: false→true)만 상태/스크롤 초기화
+    // year/month는 deps 제외 — 부모 리렌더 시 스크롤 위치 리셋 방지
     useEffect(() => {
-        if (!visible) return;
+        if (!visible) {
+            // 닫힐 때 잔여 타이머 정리
+            if (syncTimerRef.current) {
+                clearTimeout(syncTimerRef.current);
+                syncTimerRef.current = null;
+            }
+            isSyncingRef.current = false;
+            return;
+        }
+        const currentYears = buildYears(year);
         setTempYear(year);
         setTempMonth(month);
         yearIndexRef.current = null;
         monthIndexRef.current = null;
         requestAnimationFrame(() => {
-            syncToSelection(year, month);
+            syncToSelection(year, month, currentYears);
         });
-    }, [visible, year, month]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [visible]);
 
     const handleYearScroll = (offsetY: number) => {
+        // 프로그래밍 스크롤 중 무시
+        if (isSyncingRef.current) return;
         const index = Math.round(offsetY / WHEEL_ITEM_HEIGHT);
         const clamped = Math.max(0, Math.min(years.length - 1, index));
         if (yearIndexRef.current === clamped) return;
@@ -179,11 +201,51 @@ export default function MonthYearPicker({
     };
 
     const handleMonthScroll = (offsetY: number) => {
+        // 프로그래밍 스크롤 중 무시
+        if (isSyncingRef.current) return;
         const index = Math.round(offsetY / WHEEL_ITEM_HEIGHT);
         const clamped = Math.max(0, Math.min(months.length - 1, index));
         if (monthIndexRef.current === clamped) return;
         monthIndexRef.current = clamped;
         setTempMonth(months[clamped]);
+    };
+
+    const scrollToYear = (y: number, animated = true) => {
+        const index = years.indexOf(y);
+        if (index < 0) return;
+        const offset = index * WHEEL_ITEM_HEIGHT;
+        isSyncingRef.current = true;
+        if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+        yearIndexRef.current = index;
+        yearScrollRef.current?.scrollTo({ y: offset, animated });
+        syncTimerRef.current = setTimeout(() => {
+            isSyncingRef.current = false;
+            syncTimerRef.current = null;
+        }, 400);
+    };
+
+    const scrollToMonth = (m: number, animated = true) => {
+        const index = months.indexOf(m);
+        if (index < 0) return;
+        const offset = index * WHEEL_ITEM_HEIGHT;
+        isSyncingRef.current = true;
+        if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+        monthIndexRef.current = index;
+        monthScrollRef.current?.scrollTo({ y: offset, animated });
+        syncTimerRef.current = setTimeout(() => {
+            isSyncingRef.current = false;
+            syncTimerRef.current = null;
+        }, 400);
+    };
+
+    const handleYearPress = (y: number) => {
+        setTempYear(y);
+        scrollToYear(y);
+    };
+
+    const handleMonthPress = (m: number) => {
+        setTempMonth(m);
+        scrollToMonth(m);
     };
 
     const handleConfirm = () => {
@@ -212,11 +274,9 @@ export default function MonthYearPicker({
                                 ref={yearScrollRef}
                                 showsVerticalScrollIndicator={false}
                                 snapToInterval={WHEEL_ITEM_HEIGHT}
-                                snapToAlignment="center"
-                                decelerationRate={0.995}
-                                bounces
-                                alwaysBounceVertical
-                                overScrollMode="always"
+                                decelerationRate="fast"
+                                bounces={false}
+                                overScrollMode="never"
                                 contentContainerStyle={styles.wheelContent}
                                 onScroll={Animated.event(
                                     [{ nativeEvent: { contentOffset: { y: yearScrollY } } }],
@@ -233,7 +293,7 @@ export default function MonthYearPicker({
                                 onScrollEndDrag={event =>
                                     handleYearScroll(event.nativeEvent.contentOffset.y)
                                 }
-                                scrollEventThrottle={8}
+                                scrollEventThrottle={16}
                             >
                                 {years.map((y, index) => {
                                     const center = index * WHEEL_ITEM_HEIGHT;
@@ -260,12 +320,12 @@ export default function MonthYearPicker({
                                             key={y}
                                             style={{ transform: [{ scale }], opacity }}
                                         >
-                                            <Pressable
+                                                <Pressable
                                                 style={[
                                                     styles.wheelItem,
                                                     tempYear === y && styles.wheelItemActive,
                                                 ]}
-                                                onPress={() => setTempYear(y)}
+                                                onPress={() => handleYearPress(y)}
                                             >
                                                 <Text
                                                     style={[
@@ -290,11 +350,9 @@ export default function MonthYearPicker({
                                 ref={monthScrollRef}
                                 showsVerticalScrollIndicator={false}
                                 snapToInterval={WHEEL_ITEM_HEIGHT}
-                                snapToAlignment="center"
-                                decelerationRate={0.995}
-                                bounces
-                                alwaysBounceVertical
-                                overScrollMode="always"
+                                decelerationRate="fast"
+                                bounces={false}
+                                overScrollMode="never"
                                 contentContainerStyle={styles.wheelContent}
                                 onScroll={Animated.event(
                                     [{ nativeEvent: { contentOffset: { y: monthScrollY } } }],
@@ -311,7 +369,7 @@ export default function MonthYearPicker({
                                 onScrollEndDrag={event =>
                                     handleMonthScroll(event.nativeEvent.contentOffset.y)
                                 }
-                                scrollEventThrottle={8}
+                                scrollEventThrottle={16}
                             >
                                 {months.map((m, index) => {
                                     const center = index * WHEEL_ITEM_HEIGHT;
@@ -338,12 +396,12 @@ export default function MonthYearPicker({
                                             key={m}
                                             style={{ transform: [{ scale }], opacity }}
                                         >
-                                            <Pressable
+                                                <Pressable
                                                 style={[
                                                     styles.wheelItem,
                                                     tempMonth === m && styles.wheelItemActive,
                                                 ]}
-                                                onPress={() => setTempMonth(m)}
+                                                onPress={() => handleMonthPress(m)}
                                             >
                                                 <Text
                                                     style={[

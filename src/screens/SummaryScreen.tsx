@@ -190,12 +190,12 @@ export default function SummaryScreen() {
           paddingTop: theme.spacing.xs,
         },
         compareCellLabel: {
-          flex: 1,
+          flex: 0.7,
           fontSize: theme.typography.sizes.sm,
           color: theme.colors.text,
         },
         compareCellValue: {
-          flex: 0.5,
+          flex: 0.7,
           fontSize: theme.typography.sizes.sm,
           color: theme.colors.text,
           textAlign: 'right',
@@ -203,7 +203,7 @@ export default function SummaryScreen() {
           fontWeight: 'bold',
         },
         compareCellValueColumn: {
-          flex: 0.5,
+          flex: 0.7,
           marginLeft: theme.spacing.sm,
           alignItems: 'flex-end',
         },

@@ -129,25 +129,24 @@ export default function MonthPickerBottomSheet({
 
   const translateY = useRef(new Animated.Value(300)).current;
 
+  // 모달이 열릴 때(visible: false→true)만 선택 상태 초기화
+  // initialYear/initialMonth는 deps에서 제외 — 부모 리렌더 시 선택값 리셋 방지
   useEffect(() => {
-    if (visible) {
-      setYear(initialYear);
-      setMonth(initialMonth);
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 220,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(translateY, {
-        toValue: 300,
-        duration: 200,
-        easing: Easing.in(Easing.ease),
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [visible, initialYear, initialMonth, translateY]);
+    if (!visible) return;
+    setYear(initialYear);
+    setMonth(initialMonth);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  // 애니메이션은 별도 effect로 분리
+  useEffect(() => {
+    Animated.timing(translateY, {
+      toValue: visible ? 0 : 300,
+      duration: visible ? 220 : 200,
+      easing: visible ? Easing.out(Easing.ease) : Easing.in(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  }, [visible, translateY]);
 
   const handlePrevYear = () => setYear((y) => y - 1);
   const handleNextYear = () => setYear((y) => y + 1);
