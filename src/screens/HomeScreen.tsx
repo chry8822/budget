@@ -384,7 +384,9 @@ export default function HomeScreen({ navigation }: Props) {
           )}
         </ScrollView>
 
-        <ExpandableFab actions={fabActions} fabOpacity={fabOpacity} fabTranslateX={fabTranslateX} />
+        {homeTab === 'calendar' && (
+          <ExpandableFab actions={fabActions} fabOpacity={fabOpacity} fabTranslateX={fabTranslateX} />
+        )}
 
         <ScrollHint scrollRef={scrollViewRef} visible={isScrollable} opacity={scrollHintOpacity} />
       </View>
