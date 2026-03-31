@@ -187,7 +187,7 @@ console.log(`\n🔖 버전 업데이트: ${version} → ${newVersion} (${bumpTyp
 const submitFlag = autoSubmit ? ' --auto-submit' : '';
 console.log(`🚀 EAS 빌드 시작 (platform: ${platform}${autoSubmit ? ', 스토어 자동 제출 포함' : ', 빌드 파일만 생성'})\n`);
 
-execSync(`npx eas-cli build --platform ${platform} --profile production${submitFlag}`, {
+execSync(`eas build --platform ${platform} --profile production${submitFlag}`, {
   stdio: 'inherit',
   cwd: path.join(__dirname, '..'),
 });
