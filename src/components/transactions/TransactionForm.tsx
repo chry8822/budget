@@ -17,6 +17,7 @@ import {
   Pressable,
   Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import HapticPressable from '../common/HapticPressable';
 import ScreenContainer from '../common/ScreenContainer';
 import { useTheme, useColorScheme } from '../../theme/ThemeContext';
@@ -30,25 +31,56 @@ import {
   INCOME_PAYMENT_METHODS,
   EXPENSE_PAYMENT_METHODS,
 } from '../../types/transaction';
-import {
-  addCategory,
-  deleteCategory,
-  Category,
-  Transaction,
-  getCategories,
-  insertTransaction,
-  updateTransaction,
-} from '../../db/database';
+import { Transaction, insertTransaction, updateTransaction } from '../../db/database';
 import DateTimePicker, {
   DateTimePickerAndroid,
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTransactionChange } from '../common/TransactionChangeContext';
 
-const MIN_BOTTOM_INSET = 40;
+const STORAGE_CUSTOM_EXPENSE = '@budgetbook/custom_main_categories_expense';
+const STORAGE_CUSTOM_INCOME = '@budgetbook/custom_main_categories_income';
+
+function customMainStorageKey(transactionType: TransactionType): string {
+  return transactionType === 'expense' ? STORAGE_CUSTOM_EXPENSE : STORAGE_CUSTOM_INCOME;
+}
+
+async function readCustomMainCategories(transactionType: TransactionType): Promise<string[]> {
+  const raw = await AsyncStorage.getItem(customMainStorageKey(transactionType));
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw) as unknown;
+    if (!Array.isArray(v)) return [];
+    return v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0);
+  } catch {
+    return [];
+  }
+}
+
+type MainCategoryChip = { key: string; name: string; isDefault: boolean };
+
+function buildMainCategoryChips(
+  transactionType: TransactionType,
+  customNames: string[],
+): MainCategoryChip[] {
+  const defaults =
+    transactionType === 'expense' ? EXPENSE_MAIN_CATEGORIES : INCOME_MAIN_CATEGORIES;
+  const seen = new Set<string>([...defaults]);
+  const chips: MainCategoryChip[] = defaults.map((name) => ({
+    key: `d:${name}`,
+    name,
+    isDefault: true,
+  }));
+  for (const raw of customNames) {
+    const name = raw.trim();
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    chips.push({ key: `c:${name}`, name, isDefault: false });
+  }
+  return chips;
+}
 
 const QUICK_AMOUNTS = [
   { label: '+1천', delta: 1_000 },
@@ -79,7 +111,6 @@ export default function TransactionForm({
 }: Props) {
   const theme = useTheme();
   const { isDark } = useColorScheme();
-  const insets = useSafeAreaInsets();
   const isEdit = mode === 'edit';
   const isExpense = type === 'expense';
 
@@ -155,8 +186,6 @@ export default function TransactionForm({
           borderRadius: 16,
           borderWidth: 1,
           borderColor: theme.colors.border,
-          marginRight: theme.spacing.sm,
-          marginBottom: theme.spacing.sm,
         },
         chipSelected: {
           borderColor: 'transparent',
@@ -232,7 +261,7 @@ export default function TransactionForm({
           borderRadius: 12,
           paddingHorizontal: theme.spacing.lg,
           paddingTop: theme.spacing.lg,
-          paddingBottom: theme.spacing.lg + Math.max(insets.bottom, MIN_BOTTOM_INSET),
+          paddingBottom: theme.spacing.lg,
           borderWidth: 1,
           borderColor: theme.colors.border,
         },
@@ -242,9 +271,18 @@ export default function TransactionForm({
           marginBottom: theme.spacing.sm,
           color: theme.colors.text,
         },
-        chipDelete: { position: 'absolute', top: -6, right: -6 },
+        chipDelete: {
+          position: 'absolute',
+          top: -6,
+          right: -6,
+          zIndex: 2,
+          padding: 2,
+        },
+        chipOuter: {
+          position: 'relative',
+        },
       }),
-    [theme, insets.bottom],
+    [theme],
   );
 
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
@@ -285,8 +323,8 @@ export default function TransactionForm({
     return null;
   });
 
-  const [categories, setCategories] = useState<string[]>(() =>
-    isExpense ? EXPENSE_MAIN_CATEGORIES : INCOME_MAIN_CATEGORIES,
+  const [mainCatChips, setMainCatChips] = useState<MainCategoryChip[]>(() =>
+    buildMainCategoryChips(type, []),
   );
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategory, setNewCategory] = useState('');
@@ -312,17 +350,23 @@ export default function TransactionForm({
 
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  //   useEffect(() => {
-  //     getCategories().then(setCategories);
-  //   }, []);
-
   useEffect(() => {
-    if (isExpense) {
-      setCategories(EXPENSE_MAIN_CATEGORIES);
-    } else {
-      setCategories(INCOME_MAIN_CATEGORIES);
-    }
-  }, [isExpense]);
+    let cancelled = false;
+    (async () => {
+      const customs = await readCustomMainCategories(type);
+      if (cancelled) return;
+      const chips = buildMainCategoryChips(type, customs);
+      setMainCatChips(chips);
+      setMainCategory((prev) => {
+        const names = chips.map((c) => c.name);
+        if (names.includes(prev)) return prev;
+        return (names[0] ?? (type === 'expense' ? '식비' : '급여')) as MainCategory;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [type]);
 
   const openCategoryModal = () => {
     setShowAddCategory(true);
@@ -439,22 +483,52 @@ export default function TransactionForm({
     setTempDate(currentDate);
   };
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     const name = newCategory.trim();
     if (!name) return;
 
-    // 현재 모드에 따라 로컬 categories에만 추가
-    setCategories((prev) => [...prev, name]);
-    setMainCategory(name as MainCategory);
-    setNewCategory('');
-    closeCategoryModal();
+    const defaults = isExpense ? EXPENSE_MAIN_CATEGORIES : INCOME_MAIN_CATEGORIES;
+    if (defaults.includes(name)) {
+      alert('기본 카테고리와 같은 이름은 추가할 수 없습니다.');
+      return;
+    }
+
+    try {
+      const current = await readCustomMainCategories(type);
+      if (current.includes(name)) {
+        alert('이미 있는 카테고리입니다.');
+        return;
+      }
+      const next = [...current, name];
+      await AsyncStorage.setItem(customMainStorageKey(type), JSON.stringify(next));
+      const chips = buildMainCategoryChips(type, next);
+      setMainCatChips(chips);
+      setMainCategory(name as MainCategory);
+      setNewCategory('');
+      closeCategoryModal();
+    } catch (e) {
+      console.error(e);
+      alert('카테고리 추가에 실패했습니다.');
+    }
   };
 
-  const handleDeleteCategory = (name: string) => {
-    // 기본 카테고리는 삭제 막고 싶으면 조건 추가
-    setCategories((prev) => prev.filter((c) => c !== name));
-    if (mainCategory === name) {
-      setMainCategory((prev) => (prev === name ? (categories[0] as MainCategory) : prev));
+  const handleRemoveCustomMain = async (name: string) => {
+    const defaults = isExpense ? EXPENSE_MAIN_CATEGORIES : INCOME_MAIN_CATEGORIES;
+    if (defaults.includes(name)) return;
+    try {
+      const current = await readCustomMainCategories(type);
+      const next = current.filter((n) => n !== name);
+      await AsyncStorage.setItem(customMainStorageKey(type), JSON.stringify(next));
+      const chips = buildMainCategoryChips(type, next);
+      setMainCatChips(chips);
+      setMainCategory((prev) => {
+        const names = chips.map((c) => c.name);
+        if (names.includes(prev)) return prev;
+        return (names[0] ?? (type === 'expense' ? '식비' : '급여')) as MainCategory;
+      });
+    } catch (e) {
+      console.error(e);
+      alert('삭제에 실패했습니다.');
     }
   };
   const appendQuickAmount = useCallback(
@@ -578,21 +652,34 @@ export default function TransactionForm({
         <Text style={styles.label}>대분류</Text>
 
         <View style={styles.chipContainer}>
-          {categories.map((name) => (
-            <HapticPressable
-              key={name}
-              onPress={() => setMainCategory(name as MainCategory)}
-              style={[
-                styles.chip,
-                mainCategory === name && styles.chipSelected,
-                mainCategory === name && { backgroundColor: mainColor },
-              ]}
-              pressedScale={0.93}
-            >
-              <Text style={[styles.chipText, mainCategory === name && styles.chipTextSelected]}>
-                {name}
-              </Text>
-            </HapticPressable>
+          {mainCatChips.map((row) => (
+            <View key={row.key} style={styles.chipOuter}>
+              <HapticPressable
+                onPress={() => setMainCategory(row.name as MainCategory)}
+                style={[
+                  styles.chip,
+                  mainCategory === row.name && styles.chipSelected,
+                  mainCategory === row.name && { backgroundColor: mainColor },
+                ]}
+                pressedScale={0.93}
+              >
+                <Text
+                  style={[styles.chipText, mainCategory === row.name && styles.chipTextSelected]}
+                >
+                  {row.name}
+                </Text>
+              </HapticPressable>
+              {!row.isDefault && (
+                <Pressable
+                  style={styles.chipDelete}
+                  onPress={() => handleRemoveCustomMain(row.name)}
+                  hitSlop={10}
+                  accessibilityLabel={`${row.name} 카테고리 삭제`}
+                >
+                  <Ionicons name="close-circle" size={18} color={theme.colors.textMuted} />
+                </Pressable>
+              )}
+            </View>
           ))}
 
           <HapticPressable onPress={openCategoryModal} style={styles.chip} pressedScale={0.93}>

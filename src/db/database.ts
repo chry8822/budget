@@ -12,6 +12,7 @@ import {
   PaymentMethod,
   TransactionType,
 } from '../types/transaction';
+import type { SQLiteDatabase } from 'expo-sqlite';
 
 export type Transaction = {
   id?: number;
@@ -34,23 +35,39 @@ export type Budget = {
   createdAt: string;
 };
 
-/** SQLite DB 핸들 (동기 방식으로 열기) */
+/**
+ * transactionType 컬럼이 있던 실험용 스키마는 DROP 후 단순 categories로 복구합니다.
+ * (거래 transactions 데이터는 그대로 유지)
+ */
+async function ensureCategoriesTableUsable(conn: SQLiteDatabase): Promise<void> {
+  const tables = await conn.getAllAsync<{ name: string }>(
+    `SELECT name FROM sqlite_master WHERE type='table' AND name='categories';`,
+    [],
+  );
+  if (tables.length === 0) return;
+  const cols = await conn.getAllAsync<{ name: string }>(`PRAGMA table_info(categories);`, []);
+  if (cols.some((c) => c.name === 'transactionType')) {
+    await conn.runAsync('DROP TABLE IF EXISTS categories');
+    await conn.execAsync(CREATE_CATEGORIES_TABLE);
+  }
+}
+
 const db = SQLite.openDatabaseSync(DB_NAME);
 
 /**
  * 앱 시작 시 테이블 생성 및 기본 카테고리 시딩
- * - transactions, categories, budgets 테이블 생성
- * - MAIN_CATEGORIES 배열의 기본 카테고리를 INSERT OR IGNORE
  */
 export async function initDatabase(): Promise<void> {
   await db.execAsync(CREATE_TRANSACTIONS_TABLE);
-  await db.execAsync(CREATE_CATEGORIES_TABLE);
   await db.execAsync(CREATE_BUDGETS_TABLE);
+  await db.execAsync(CREATE_CATEGORIES_TABLE);
+  await ensureCategoriesTableUsable(db);
 
+  const createdAt = new Date().toISOString();
   for (const name of MAIN_CATEGORIES) {
     await db.runAsync(
       `INSERT OR IGNORE INTO categories (name, isDefault, createdAt) VALUES (?, 1, ?);`,
-      [name, new Date().toISOString()],
+      [name, createdAt],
     );
   }
 }
@@ -339,7 +356,6 @@ export type Category = { id: number; name: string; isDefault: number };
 
 /**
  * 전체 카테고리 목록 조회 (기본 카테고리 우선, 생성순)
- * @returns Category 배열
  */
 export async function getCategories(): Promise<Category[]> {
   return db.getAllAsync<Category>(
@@ -350,7 +366,6 @@ export async function getCategories(): Promise<Category[]> {
 
 /**
  * 사용자 정의 카테고리 추가
- * @param name - 카테고리명
  */
 export async function addCategory(name: string): Promise<void> {
   await db.runAsync(`INSERT INTO categories (name, createdAt) VALUES (?, ?);`, [
@@ -361,7 +376,6 @@ export async function addCategory(name: string): Promise<void> {
 
 /**
  * 카테고리 삭제
- * @param id - 삭제할 카테고리 ID
  */
 export async function deleteCategory(id: number): Promise<void> {
   await db.runAsync(`DELETE FROM categories WHERE id = ?;`, [id]);

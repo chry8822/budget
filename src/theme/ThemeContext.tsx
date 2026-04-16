@@ -2,7 +2,7 @@
  * 테마 Context (라이트/다크)
  * - useTheme()로 현재 theme 조회
  * - setColorScheme으로 다크 모드 전환, AsyncStorage에 저장
- * - Android: 시스템 네비는 다크 모드 영향 없이 항상 기본(라이트) 색으로 고정
+ * - Android: 시스템 네비 — edge-to-edge 대응(setStyle + 버튼 스타일), 배경색 API는 사용하지 않음
  */
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
@@ -40,9 +40,10 @@ const ThemeContext = createContext<ThemeContextValue>({
   isDark: false,
 });
 
-/** edge-to-edge 사용 시 setBackgroundColorAsync 미지원이므로 한 번 실패하면 더 이상 호출하지 않음 */
-const navBarUnsupportedRef = { current: false };
-
+/**
+ * Android 15+ / edge-to-edge 기본값에서는 setBackgroundColorAsync가 지원되지 않아 경고가 남음.
+ * expo-navigation-bar 권장: edge-to-edge일 때는 setStyle 사용.
+ */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [colorScheme, setColorSchemeState] = useState<ColorScheme>('light');
 
@@ -55,24 +56,27 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const applyNavBarStyle = useCallback(async () => {
-    if (Platform.OS !== 'android' || navBarUnsupportedRef.current) return;
+    if (Platform.OS !== 'android') return;
     try {
-      await NavigationBar.setBackgroundColorAsync('#FFFFFF');
+      NavigationBar.setStyle('light');
+    } catch {
+      /* noop */
+    }
+    try {
       await NavigationBar.setButtonStyleAsync('dark');
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (msg.includes('edge-to-edge')) navBarUnsupportedRef.current = true;
+    } catch {
+      /* noop */
     }
   }, []);
 
-  // Android: 시스템 네비는 앱 다크 모드와 무관하게 항상 기본(라이트) 색 유지 (edge-to-edge 시 미호출)
+  // Android: 시스템 네비 — edge-to-edge면 setStyle, 아니면 배경+버튼
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     const delay = setTimeout(applyNavBarStyle, 100);
     return () => clearTimeout(delay);
   }, [colorScheme, applyNavBarStyle]);
 
-  // 앱 포그라운드 복귀 시에도 시스템 네비 다시 적용 (edge-to-edge면 스킵)
+  // 앱 포그라운드 복귀 시에도 시스템 네비 다시 적용
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     const sub = AppState.addEventListener('change', (state) => {

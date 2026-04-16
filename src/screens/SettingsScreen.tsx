@@ -31,6 +31,7 @@ import {
   loadNotificationSettings,
   saveNotificationSettings,
   requestNotificationPermission,
+  nativeNotificationsAvailable,
 } from '../utils/notifications';
 
 export default function SettingsScreen() {
@@ -48,7 +49,12 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     loadNotificationSettings().then(({ enabled, hour, minute }) => {
-      setNotiEnabled(enabled);
+      if (enabled && !nativeNotificationsAvailable()) {
+        setNotiEnabled(false);
+        void saveNotificationSettings(false, hour, minute);
+      } else {
+        setNotiEnabled(enabled);
+      }
       setNotiHour(hour);
       setNotiMinute(minute);
     });
@@ -71,6 +77,14 @@ export default function SettingsScreen() {
   const handleNotiToggle = useCallback(
     async (value: boolean) => {
       if (value) {
+        if (!nativeNotificationsAvailable()) {
+          Alert.alert(
+            'Expo Go 제한',
+            'Android Expo Go에서는 알림 모듈이 제공되지 않습니다.\n개발 빌드(npx expo run:android) 또는 스토어 빌드에서 테스트해 주세요.',
+            [{ text: '확인' }],
+          );
+          return;
+        }
         const granted = await requestNotificationPermission();
         if (!granted) {
           Alert.alert(
@@ -223,6 +237,12 @@ export default function SettingsScreen() {
           borderWidth: 1,
           borderColor: theme.colors.primary,
         },
+        notiHint: {
+          fontSize: theme.typography.sizes.sm,
+          color: theme.colors.textMuted,
+          paddingBottom: theme.spacing.sm,
+          lineHeight: 20,
+        },
         notiTimeBadgeText: {
           fontSize: theme.typography.sizes.sm,
           color: theme.colors.primary,
@@ -286,6 +306,12 @@ export default function SettingsScreen() {
           thumbColor={theme.colors.primary}
         />
       </View>
+      {!nativeNotificationsAvailable() && (
+        <Text style={styles.notiHint}>
+          Android Expo Go에서는 알림 API가 비활성화되어 있습니다. 실제 알림은 개발 빌드나
+          출시 빌드에서 확인해 주세요.
+        </Text>
+      )}
       {notiEnabled && (
         <View style={styles.notiTimeRow}>
           <Text style={styles.notiTimeLabel}>알림 시간</Text>
