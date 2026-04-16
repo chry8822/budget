@@ -73,7 +73,9 @@ Scan the QR code with **Expo Go**, or run `npm run ios` / `npm run android` for 
 ### Build (EAS)
 EAS Build is configured via `eas.json` and `app.json`.  
 **iOS**: com.chrys.hanunssok  
-**Android**: com.chrys.hanunssok
+**Android**: com.chrys.hanunssok  
+
+Release commands, optional auto-submit, and the store review flow are documented in **[docs/EAS_BUILD_AND_STORE.md](docs/EAS_BUILD_AND_STORE.md)** (Korean).
 
 ***
 
